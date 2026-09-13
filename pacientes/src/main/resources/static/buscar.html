@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pacientes - Buscar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+<div class="navbar">
+    <a href="index.html" class="logo">
+        <span class="icono"><i class="fa-solid fa-hospital"></i></span>
+        Módulo Pacientes
+    </a>
+    <nav>
+        <a href="registrar.html"><i class="fa-solid fa-user-plus"></i> Registrar</a>
+        <a href="buscar.html" class="activo"><i class="fa-solid fa-magnifying-glass"></i> Buscar</a>
+    </nav>
+</div>
+
+<div class="contenido">
+    <button class="btn-volver" onclick="history.back()"><i class="fa-solid fa-arrow-left"></i> Volver</button>
+
+    <div class="card">
+        <h2><i class="fa-solid fa-magnifying-glass"></i> Buscar paciente</h2>
+
+        <div class="filtros">
+            <button type="button" class="filtro-pill activo" data-filtro="Todos">Todos</button>
+            <button type="button" class="filtro-pill" data-filtro="Nombre">Por nombre</button>
+            <button type="button" class="filtro-pill" data-filtro="Apellido">Por apellido</button>
+            <button type="button" class="filtro-pill" data-filtro="Documento">Por documento</button>
+            <button type="button" class="filtro-pill" data-filtro="Código">Por código</button>
+        </div>
+
+        <div class="fila-busqueda">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input id="inputBusqueda" type="text" placeholder="Escribe un nombre...">
+            <button onclick="buscarPaciente()">Buscar</button>
+        </div>
+
+        <div id="mensajeBusqueda" class="mensaje"></div>
+
+        <div id="listaResultados" class="lista-resultados"></div>
+    </div>
+
+    <div id="pieDePagina"></div>
+</div>
+
+<script src="js/comun.js"></script>
+<script>
+    let filtroActivo = 'Todos';
+    const placeholders = {
+        'Todos': 'Nombre, apellido, documento o código...',
+        'Nombre': 'Ej: Maria',
+        'Apellido': 'Ej: Torres',
+        'Documento': 'Ej: 71234567',
+        'Código': 'Ej: PAC-A1B2C3'
+    };
+
+    document.querySelectorAll('.filtro-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            document.querySelectorAll('.filtro-pill').forEach(p => p.classList.remove('activo'));
+            pill.classList.add('activo');
+            filtroActivo = pill.dataset.filtro;
+            document.getElementById('inputBusqueda').placeholder = placeholders[filtroActivo];
+            document.getElementById('inputBusqueda').focus();
+        });
+    });
+
+    async function buscarPaciente() {
+        const termino = document.getElementById('inputBusqueda').value.trim();
+        const lista = document.getElementById('listaResultados');
+        lista.innerHTML = '';
+
+        if (!termino) {
+            mostrarMensaje('mensajeBusqueda', 'Escribe un texto para buscar.', 'error');
+            return;
+        }
+        try {
+            const resp = await fetch(`${API_BASE}/buscar?termino=${encodeURIComponent(termino)}`);
+            if (resp.status === 404) {
+                document.getElementById('mensajeBusqueda').className = 'mensaje';
+                lista.innerHTML = `
+                    <div class="vacio">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        No se encontraron pacientes que coincidan con "${escapeHtml(termino)}".
+                    </div>`;
+                return;
+            }
+            if (!resp.ok) throw new Error('Error al buscar pacientes');
+
+            const pacientes = await resp.json();
+            document.getElementById('mensajeBusqueda').className = 'mensaje';
+            pintarResultados(pacientes);
+        } catch (err) {
+            mostrarMensaje('mensajeBusqueda', 'Error de conexión con la API: ' + err.message, 'error');
+        }
+    }
+
+    function pintarResultados(pacientes) {
+        const lista = document.getElementById('listaResultados');
+        lista.innerHTML = '';
+
+        pacientes.forEach(p => {
+            const item = document.createElement('div');
+            item.className = 'item-resultado';
+            item.innerHTML = `
+                <div class="avatar">${iniciales(p.nombres, p.apellidoPaterno)}</div>
+                <div class="item-info">
+                    <div class="nombre">${escapeHtml(p.nombres ?? '')} ${escapeHtml(p.apellidoPaterno ?? '')} ${escapeHtml(p.apellidoMaterno ?? '')}</div>
+                    <div class="meta">
+                        ${escapeHtml(p.numeroDocumento ?? '-')} · ${escapeHtml(p.codigoPaciente ?? '-')}
+                        <span class="badge ${p.estado === 'Activo' ? 'si' : 'no'}">${escapeHtml(p.estado ?? '-')}</span>
+                    </div>
+                </div>
+                <div class="item-acciones">
+                    <button class="secundario" onclick="irAContactos(${p.idPaciente})">
+                        <i class="fa-solid fa-address-book"></i> Contactos
+                    </button>
+                    <button onclick="irAPaciente(${p.idPaciente})">
+                        Ver ficha <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            `;
+            lista.appendChild(item);
+        });
+    }
+
+    document.getElementById('inputBusqueda').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') buscarPaciente();
+    });
+
+    const terminoUrl = new URLSearchParams(window.location.search).get('q');
+    if (terminoUrl) {
+        document.getElementById('inputBusqueda').value = terminoUrl;
+        buscarPaciente();
+    }
+</script>
+
+</body>
+</html>

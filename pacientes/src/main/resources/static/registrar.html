@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pacientes - Ficha del paciente</title>
+<title>Pacientes - Registrar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -18,36 +18,18 @@
         Módulo Pacientes
     </a>
     <nav>
-        <a href="registrar.html"><i class="fa-solid fa-user-plus"></i> Registrar</a>
+        <a href="registrar.html" class="activo"><i class="fa-solid fa-user-plus"></i> Registrar</a>
         <a href="buscar.html"><i class="fa-solid fa-magnifying-glass"></i> Buscar</a>
-        <a href="#" class="activo"><i class="fa-solid fa-id-card"></i> Ficha</a>
     </nav>
 </div>
 
 <div class="contenido">
     <button class="btn-volver" onclick="history.back()"><i class="fa-solid fa-arrow-left"></i> Volver</button>
 
-    <div class="resumen-paciente">
-        <div class="avatar" id="avatarPaciente">--</div>
-        <div class="datos">
-            <h2 id="nombreCompleto">Cargando...</h2>
-            <div class="meta">
-                <span id="metaCodigoEdad"></span>
-                <span id="badgeEstado"></span>
-            </div>
-        </div>
-        <div class="cta">
-            <button id="btnIrContactos" class="secundario">
-                <i class="fa-solid fa-address-book"></i>
-                Ver contactos de emergencia
-            </button>
-        </div>
-    </div>
-
     <div class="card">
-        <h2><i class="fa-solid fa-pen-to-square"></i> Editar datos del paciente</h2>
+        <h2><i class="fa-solid fa-user-plus"></i> Registrar nuevo paciente</h2>
 
-        <form id="formPaciente" onsubmit="guardarPaciente(event)">
+        <form id="formRegistrar" onsubmit="registrarPaciente(event)">
             <div class="seccion-form">Identificación</div>
             <div class="grid-3">
                 <div>
@@ -67,7 +49,6 @@
                     <select id="estado">
                         <option value="Activo">Activo</option>
                         <option value="Inactivo">Inactivo</option>
-                        <option value="Fallecido">Fallecido</option>
                     </select>
                 </div>
             </div>
@@ -140,9 +121,9 @@
 
             <button type="submit">
                 <i class="fa-solid fa-check"></i>
-                Guardar cambios
+                Registrar paciente
             </button>
-            <div id="mensajePaciente" class="mensaje"></div>
+            <div id="mensajeRegistrar" class="mensaje"></div>
         </form>
     </div>
 
@@ -151,60 +132,10 @@
 
 <script src="js/comun.js"></script>
 <script>
-    let pacienteActual = null;
-    const idPaciente = obtenerIdPacienteDeUrl();
-
-    if (!idPaciente) {
-        window.location.href = 'buscar.html';
-    } else {
-        document.getElementById('btnIrContactos').addEventListener('click', () => irAContactos(idPaciente));
-        cargarPaciente();
-    }
-
-    async function cargarPaciente() {
-        try {
-            const resp = await fetch(`${API_BASE}/${idPaciente}`);
-            if (!resp.ok) throw new Error('No se pudo cargar el paciente');
-            pacienteActual = await resp.json();
-            pintarResumen(pacienteActual);
-            pintarFormulario(pacienteActual);
-        } catch (err) {
-            mostrarMensaje('mensajePaciente', err.message, 'error');
-        }
-    }
-
-    function pintarResumen(p) {
-        document.getElementById('avatarPaciente').textContent = iniciales(p.nombres, p.apellidoPaterno);
-        document.getElementById('nombreCompleto').textContent =
-            `${p.nombres ?? ''} ${p.apellidoPaterno ?? ''} ${p.apellidoMaterno ?? ''}`;
-        document.getElementById('metaCodigoEdad').textContent =
-            `${p.codigoPaciente ?? '-'} · ${p.edad ?? '-'} años`;
-        document.getElementById('badgeEstado').innerHTML =
-            `<span class="badge ${p.estado === 'Activo' ? 'si' : 'no'}">${p.estado ?? '-'}</span>`;
-    }
-
-    function pintarFormulario(p) {
-        document.getElementById('tipoDocumento').value = p.tipoDocumento ?? 'DNI';
-        document.getElementById('numeroDocumento').value = p.numeroDocumento ?? '';
-        document.getElementById('estado').value = p.estado ?? 'Activo';
-        document.getElementById('nombres').value = p.nombres ?? '';
-        document.getElementById('apellidoPaterno').value = p.apellidoPaterno ?? '';
-        document.getElementById('apellidoMaterno').value = p.apellidoMaterno ?? '';
-        document.getElementById('fechaNacimiento').value = p.fechaNacimiento ? p.fechaNacimiento.substring(0, 10) : '';
-        document.getElementById('sexo').value = p.sexo ?? 'Masculino';
-        document.getElementById('estadoCivil').value = p.estadoCivil ?? 'Soltero';
-        document.getElementById('telefono').value = p.telefono ?? '';
-        document.getElementById('correoElectronico').value = p.correoElectronico ?? '';
-        document.getElementById('tipoSangre').value = p.tipoSangre ?? 'O+';
-        document.getElementById('ocupacion').value = p.ocupacion ?? '';
-    }
-
-    async function guardarPaciente(event) {
+    async function registrarPaciente(event) {
         event.preventDefault();
-        if (!pacienteActual) return;
 
         const payload = {
-            ...pacienteActual,
             tipoDocumento: document.getElementById('tipoDocumento').value,
             numeroDocumento: document.getElementById('numeroDocumento').value,
             estado: document.getElementById('estado').value,
@@ -221,18 +152,18 @@
         };
 
         try {
-            const resp = await fetch(`${API_BASE}/${idPaciente}`, {
-                method: 'PUT',
+            const resp = await fetch(`${API_BASE}`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             if (!resp.ok) throw new Error('El servidor respondió con error ' + resp.status);
-            pacienteActual = await resp.json();
-            pintarResumen(pacienteActual);
-            pintarFormulario(pacienteActual);
-            mostrarMensaje('mensajePaciente', 'Datos del paciente actualizados correctamente.', 'ok');
+
+            const nuevoPaciente = await resp.json();
+            mostrarMensaje('mensajeRegistrar', 'Paciente registrado correctamente. Redirigiendo...', 'ok');
+            setTimeout(() => irAPaciente(nuevoPaciente.idPaciente), 800);
         } catch (err) {
-            mostrarMensaje('mensajePaciente', 'No se pudo guardar: ' + err.message, 'error');
+            mostrarMensaje('mensajeRegistrar', 'No se pudo registrar: ' + err.message, 'error');
         }
     }
 </script>

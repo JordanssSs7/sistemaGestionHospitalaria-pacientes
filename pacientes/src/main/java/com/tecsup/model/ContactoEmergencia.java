@@ -1,5 +1,6 @@
 package com.tecsup.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -27,6 +28,7 @@ public class ContactoEmergencia {
 
     @ManyToOne
     @JoinColumn(name = "id_paciente", referencedColumnName = "id_paciente")
+    @JsonIgnore
     private Paciente paciente;
 
     public Integer getIdContacto() { return idContacto; }

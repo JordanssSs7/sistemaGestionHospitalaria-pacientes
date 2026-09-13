@@ -4,41 +4,53 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pacientes - Contactos de emergencia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body>
 
-<header>
-    <h1>Módulo de Pacientes</h1>
-    <p>Edición de datos del paciente (RF-PAC-08) y contactos de emergencia (RF-PAC-10)</p>
-</header>
+<div class="navbar">
+    <a href="index.html" class="logo">
+        <span class="icono"><i class="fa-solid fa-hospital"></i></span>
+        Módulo Pacientes
+    </a>
+    <nav>
+        <a href="registrar.html"><i class="fa-solid fa-user-plus"></i> Registrar</a>
+        <a href="buscar.html"><i class="fa-solid fa-magnifying-glass"></i> Buscar</a>
+        <a href="#" class="activo"><i class="fa-solid fa-address-book"></i> Contactos</a>
+    </nav>
+</div>
 
-<nav class="tabs">
-    <a href="index.html">Buscar</a>
-    <a href="#" id="linkPaciente">Datos del paciente</a>
-    <a href="#" class="activo">Contactos de emergencia</a>
-</nav>
+<div class="contenido">
+    <button class="btn-volver" onclick="history.back()"><i class="fa-solid fa-arrow-left"></i> Volver</button>
 
-<main>
-    <section>
-        <h2>Contactos de emergencia (RF-PAC-10)</h2>
-        <div id="infoPaciente"></div>
+    <div class="resumen-paciente">
+        <div class="avatar" id="avatarPaciente">--</div>
+        <div class="datos">
+            <h2 id="nombreCompleto">Cargando...</h2>
+            <div class="meta">
+                <span id="metaCodigo"></span>
+            </div>
+        </div>
+        <div class="cta">
+            <button id="btnIrPaciente" class="secundario">
+                <i class="fa-solid fa-id-card"></i>
+                Ver ficha del paciente
+            </button>
+        </div>
+    </div>
 
-        <table id="tablaContactos">
-            <thead>
-                <tr>
-                    <th>Nombre completo</th>
-                    <th>Parentesco</th>
-                    <th>Teléfono</th>
-                    <th>Correo</th>
-                    <th>Principal</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="cuerpoTablaContactos"></tbody>
-        </table>
+    <div class="card">
+        <h2><i class="fa-solid fa-address-book"></i> Contactos de emergencia</h2>
 
-        <h2 style="margin-top:24px;" id="tituloFormContacto">Registrar nuevo contacto</h2>
+        <div id="listaContactos" class="lista-resultados"></div>
+    </div>
+
+    <div class="card">
+        <h2 id="tituloFormContacto"><i class="fa-solid fa-user-plus"></i> Registrar nuevo contacto</h2>
         <form id="formContacto" onsubmit="guardarContacto(event)">
             <input type="hidden" id="idContactoEdit" value="">
             <div class="grid-2">
@@ -74,21 +86,26 @@
                     </select>
                 </div>
             </div>
-            <button type="submit" id="btnGuardarContacto">Registrar contacto</button>
+            <button type="submit" id="btnGuardarContacto">
+                <i class="fa-solid fa-check"></i>
+                Registrar contacto
+            </button>
             <button type="button" class="secundario oculto" id="btnCancelarEdicion" onclick="cancelarEdicionContacto()">Cancelar</button>
             <div id="mensajeContacto" class="mensaje"></div>
         </form>
-    </section>
-</main>
+    </div>
+
+    <div id="pieDePagina"></div>
+</div>
 
 <script src="js/comun.js"></script>
 <script>
     const idPaciente = obtenerIdPacienteDeUrl();
 
     if (!idPaciente) {
-        window.location.href = 'index.html';
+        window.location.href = 'buscar.html';
     } else {
-        document.getElementById('linkPaciente').addEventListener('click', () => irAPaciente(idPaciente));
+        document.getElementById('btnIrPaciente').addEventListener('click', () => irAPaciente(idPaciente));
         cargarInfoPaciente();
         cargarContactos();
     }
@@ -98,8 +115,9 @@
             const resp = await fetch(`${API_BASE}/${idPaciente}`);
             if (!resp.ok) throw new Error('No se pudo cargar el paciente');
             const p = await resp.json();
-            document.getElementById('infoPaciente').textContent =
-                `Paciente: ${p.nombres ?? ''} ${p.apellidoPaterno ?? ''} · Código: ${p.codigoPaciente ?? '-'}`;
+            document.getElementById('avatarPaciente').textContent = iniciales(p.nombres, p.apellidoPaterno);
+            document.getElementById('nombreCompleto').textContent = `${p.nombres ?? ''} ${p.apellidoPaterno ?? ''}`;
+            document.getElementById('metaCodigo').textContent = `Código: ${p.codigoPaciente ?? '-'}`;
         } catch (err) {
             mostrarMensaje('mensajeContacto', err.message, 'error');
         }
@@ -108,25 +126,35 @@
     async function cargarContactos() {
         const resp = await fetch(`${API_BASE}/${idPaciente}/contactos`);
         const contactos = resp.ok ? await resp.json() : [];
-        const cuerpo = document.getElementById('cuerpoTablaContactos');
-        cuerpo.innerHTML = '';
+        const lista = document.getElementById('listaContactos');
+        lista.innerHTML = '';
 
         if (contactos.length === 0) {
-            cuerpo.innerHTML = '<tr><td colspan="6" style="color:#888;">Sin contactos registrados todavía.</td></tr>';
+            lista.innerHTML = `
+                <div class="vacio">
+                    <i class="fa-solid fa-address-book"></i>
+                    <div>Todavía no hay contactos de emergencia registrados.</div>
+                </div>`;
             return;
         }
 
         contactos.forEach(c => {
-            const fila = document.createElement('tr');
-            fila.innerHTML = `
-                <td>${c.nombreCompleto ?? ''}</td>
-                <td>${c.parentesco ?? ''}</td>
-                <td>${c.telefono ?? ''}</td>
-                <td>${c.correo ?? ''}</td>
-                <td><span class="badge ${c.contactoPrincipal ? 'si' : 'no'}">${c.contactoPrincipal ? 'Sí' : 'No'}</span></td>
-                <td><span class="accion-link" onclick='editarContacto(${JSON.stringify(c)})'>Editar</span></td>
+            const item = document.createElement('div');
+            item.className = 'item-resultado';
+            item.innerHTML = `
+                <div class="avatar contacto">${iniciales(c.nombreCompleto, '')}</div>
+                <div class="item-info">
+                    <div class="nombre">${escapeHtml(c.nombreCompleto ?? '')} ${c.contactoPrincipal ? '<span class="badge si">Principal</span>' : ''}</div>
+                    <div class="meta">${escapeHtml(c.parentesco ?? '-')} · ${escapeHtml(c.telefono ?? '-')} · ${escapeHtml(c.correo ?? '-')}</div>
+                </div>
+                <div class="item-acciones">
+                    <button class="secundario" onclick='editarContacto(${JSON.stringify(c)})'>
+                        <i class="fa-solid fa-pen-to-square"></i>
+                        Editar
+                    </button>
+                </div>
             `;
-            cuerpo.appendChild(fila);
+            lista.appendChild(item);
         });
     }
 
@@ -139,8 +167,9 @@
         document.getElementById('cDireccion').value = contacto.direccion ?? '';
         document.getElementById('cContactoPrincipal').value = contacto.contactoPrincipal ? 'true' : 'false';
 
-        document.getElementById('tituloFormContacto').textContent = 'Editar contacto de emergencia';
-        document.getElementById('btnGuardarContacto').textContent = 'Guardar cambios';
+        document.getElementById('tituloFormContacto').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar contacto de emergencia';
+        document.getElementById('btnGuardarContacto').innerHTML =
+            '<i class="fa-solid fa-check"></i> Guardar cambios';
         document.getElementById('btnCancelarEdicion').classList.remove('oculto');
         document.getElementById('formContacto').scrollIntoView({ behavior: 'smooth' });
     }
@@ -148,8 +177,9 @@
     function cancelarEdicionContacto() {
         document.getElementById('formContacto').reset();
         document.getElementById('idContactoEdit').value = '';
-        document.getElementById('tituloFormContacto').textContent = 'Registrar nuevo contacto';
-        document.getElementById('btnGuardarContacto').textContent = 'Registrar contacto';
+        document.getElementById('tituloFormContacto').innerHTML = '<i class="fa-solid fa-user-plus"></i> Registrar nuevo contacto';
+        document.getElementById('btnGuardarContacto').innerHTML =
+            '<i class="fa-solid fa-check"></i> Registrar contacto';
         document.getElementById('btnCancelarEdicion').classList.add('oculto');
     }
 
