@@ -214,4 +214,21 @@ public class Paciente {
     public void setAlergias(List<Alergia> alergias) {
         this.alergias = alergias;
     }
+
+    // Este campo no existirá en la tabla de la base de datos
+    @Transient
+    public Integer getEdad() {
+        if (this.fechaNacimiento == null) {
+            return null;
+        }
+        // Convertimos el Date tradicional a LocalDate para hacer el cálculo exacto
+        java.time.LocalDate nacimiento = this.fechaNacimiento.toInstant()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate();
+        java.time.LocalDate hoy = java.time.LocalDate.now();
+
+        // Calculamos y retornamos los años exactos de diferencia
+        return java.time.Period.between(nacimiento, hoy).getYears();
+    }
+
 }

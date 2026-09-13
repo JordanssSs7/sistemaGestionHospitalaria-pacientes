@@ -2,6 +2,8 @@ package com.tecsup.repository;
 
 import com.tecsup.model.Paciente;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -10,11 +12,15 @@ import java.util.Optional;
 @Repository
 public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
 
-    // Spring Data JPA genera automáticamente las consultas por nombre de método
+    // Método necesario para buscar por documento específico
     Optional<Paciente> findByNumeroDocumento(String numeroDocumento);
 
-    Optional<Paciente> findByCodigoPaciente(String codigoPaciente);
+    // Búsqueda global por documento, código, nombres o apellidos
+    @Query("SELECT p FROM Paciente p WHERE p.numeroDocumento LIKE %:termino% " +
+            "OR p.codigoPaciente LIKE %:termino% " +
+            "OR p.nombres LIKE %:termino% " +
+            "OR p.apellidoPaterno LIKE %:termino% " +
+            "OR p.apellidoMaterno LIKE %:termino%")
+    List<Paciente> buscarPacienteGlobal(@Param("termino") String termino);
 
-    // Búsqueda por nombres o apellidos (RF-PAC-05)
-    List<Paciente> findByNombresContainingIgnoreCaseOrApellidoPaternoContainingIgnoreCase(String nombres, String apellidoPaterno);
 }

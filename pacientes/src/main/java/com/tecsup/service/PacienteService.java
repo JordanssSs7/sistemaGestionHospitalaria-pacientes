@@ -34,14 +34,13 @@ public class PacienteService {
         return pacienteRepository.findAll();
     }
 
-    // RF-PAC-05: Buscar por documento
+    // RF-PAC-05: Buscar pacientes por documento, código, nombres y apellidos
+    public List<Paciente> buscarGlobal(String termino) {
+        return pacienteRepository.buscarPacienteGlobal(termino);
+    }
+    // RF-PAC-05: Buscar por documento específico
     public Optional<Paciente> buscarPorDocumento(String documento) {
         return pacienteRepository.findByNumeroDocumento(documento);
-    }
-
-    // RF-PAC-05: Buscar por nombres o apellidos
-    public List<Paciente> buscarPorNombresOApellidos(String termino) {
-        return pacienteRepository.findByNombresContainingIgnoreCaseOrApellidoPaternoContainingIgnoreCase(termino, termino);
     }
 
     // RF-PAC-08: modificar datos del paciente

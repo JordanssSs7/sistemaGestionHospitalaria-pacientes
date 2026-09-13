@@ -38,14 +38,23 @@ public class PacienteController {
     @GetMapping("/documento/{numeroDocumento}")
     public ResponseEntity<Paciente> buscarPorDocumento(@PathVariable String numeroDocumento) {
         Optional<Paciente> paciente = pacienteService.buscarPorDocumento(numeroDocumento);
-        return paciente.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
-                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+
+        if (paciente.isPresent()) {
+            // Si lo encuentra, devuelve el paciente y un estado 200 (OK)
+            return new ResponseEntity<>(paciente.get(), HttpStatus.OK);
+        } else {
+            // Si no lo encuentra, devuelve un estado 404 (NOT FOUND)
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
-    // Endpoint para buscar por término de nombre o apellido (GET)
+    // Endpoint para RF-PAC-05
     @GetMapping("/buscar")
-    public ResponseEntity<List<Paciente>> buscarPorNombre(@RequestParam String termino) {
-        List<Paciente> pacientes = pacienteService.buscarPorNombresOApellidos(termino);
+    public ResponseEntity<List<Paciente>> buscarPaciente(@RequestParam String termino) {
+        List<Paciente> pacientes = pacienteService.buscarGlobal(termino);
+        if(pacientes.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
         return new ResponseEntity<>(pacientes, HttpStatus.OK);
     }
 
