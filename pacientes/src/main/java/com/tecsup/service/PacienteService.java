@@ -43,4 +43,26 @@ public class PacienteService {
     public List<Paciente> buscarPorNombresOApellidos(String termino) {
         return pacienteRepository.findByNombresContainingIgnoreCaseOrApellidoPaternoContainingIgnoreCase(termino, termino);
     }
+
+    // RF-PAC-08: modificar datos del paciente
+    public Paciente actualizarPaciente(Integer idPaciente, Paciente datosActualizados) {
+        Paciente paciente = pacienteRepository.findById(idPaciente)
+                .orElseThrow(() -> new RuntimeException("Paciente no encontrado con id: " + idPaciente));
+
+        paciente.setTipoDocumento(datosActualizados.getTipoDocumento());
+        paciente.setNumeroDocumento(datosActualizados.getNumeroDocumento());
+        paciente.setNombres(datosActualizados.getNombres());
+        paciente.setApellidoPaterno(datosActualizados.getApellidoPaterno());
+        paciente.setApellidoMaterno(datosActualizados.getApellidoMaterno());
+        paciente.setFechaNacimiento(datosActualizados.getFechaNacimiento());
+        paciente.setSexo(datosActualizados.getSexo());
+        paciente.setEstadoCivil(datosActualizados.getEstadoCivil());
+        paciente.setTelefono(datosActualizados.getTelefono());
+        paciente.setCorreoElectronico(datosActualizados.getCorreoElectronico());
+        paciente.setOcupacion(datosActualizados.getOcupacion());
+        paciente.setTipoSangre(datosActualizados.getTipoSangre());
+        paciente.setEstado(datosActualizados.getEstado());
+
+        return pacienteRepository.save(paciente);
+    }
 }

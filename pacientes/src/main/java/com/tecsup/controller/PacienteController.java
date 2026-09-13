@@ -48,4 +48,11 @@ public class PacienteController {
         List<Paciente> pacientes = pacienteService.buscarPorNombresOApellidos(termino);
         return new ResponseEntity<>(pacientes, HttpStatus.OK);
     }
+
+    // RF-PAC-08: actualizar datos del paciente (PUT)
+    @PutMapping("/{id}")
+    public ResponseEntity<Paciente> actualizarPaciente(@PathVariable Integer id, @RequestBody Paciente paciente) {
+        Paciente actualizado = pacienteService.actualizarPaciente(id, paciente);
+        return new ResponseEntity<>(actualizado, HttpStatus.OK);
+    }
 }
