@@ -221,8 +221,10 @@ public class Paciente {
         if (this.fechaNacimiento == null) {
             return null;
         }
-        // Convertimos el Date tradicional a LocalDate para hacer el cálculo exacto
-        java.time.LocalDate nacimiento = this.fechaNacimiento.toInstant()
+        // Usamos getTime() en vez de toInstant(): cuando Hibernate lee la fecha desde MySQL
+        // la devuelve como java.sql.Date, y java.sql.Date.toInstant() siempre lanza
+        // UnsupportedOperationException (no tiene información de hora/zona horaria).
+        java.time.LocalDate nacimiento = java.time.Instant.ofEpochMilli(this.fechaNacimiento.getTime())
                 .atZone(java.time.ZoneId.systemDefault())
                 .toLocalDate();
         java.time.LocalDate hoy = java.time.LocalDate.now();

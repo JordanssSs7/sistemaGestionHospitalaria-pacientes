@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pacientes - Datos del paciente</title>
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+<header>
+    <h1>Módulo de Pacientes</h1>
+    <p>Edición de datos del paciente (RF-PAC-08) y contactos de emergencia (RF-PAC-10)</p>
+</header>
+
+<nav class="tabs">
+    <a href="index.html">Buscar</a>
+    <a href="#" class="activo">Datos del paciente</a>
+    <a href="#" id="linkContactos">Contactos de emergencia</a>
+</nav>
+
+<main>
+    <section>
+        <h2>Datos del paciente (RF-PAC-08)</h2>
+        <div id="infoPaciente"></div>
+
+        <form id="formPaciente" onsubmit="guardarPaciente(event)">
+            <div class="grid-3">
+                <div>
+                    <label>Tipo documento</label>
+                    <select id="tipoDocumento">
+                        <option value="DNI">DNI</option>
+                        <option value="CE">Carné de Extranjería</option>
+                        <option value="Pasaporte">Pasaporte</option>
+                    </select>
+                </div>
+                <div>
+                    <label>N.º documento</label>
+                    <input id="numeroDocumento" type="text" required>
+                </div>
+                <div>
+                    <label>Estado</label>
+                    <select id="estado">
+                        <option value="Activo">Activo</option>
+                        <option value="Inactivo">Inactivo</option>
+                        <option value="Fallecido">Fallecido</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-3">
+                <div>
+                    <label>Nombres</label>
+                    <input id="nombres" type="text" required>
+                </div>
+                <div>
+                    <label>Apellido paterno</label>
+                    <input id="apellidoPaterno" type="text">
+                </div>
+                <div>
+                    <label>Apellido materno</label>
+                    <input id="apellidoMaterno" type="text">
+                </div>
+            </div>
+
+            <div class="grid-3">
+                <div>
+                    <label>Fecha nacimiento</label>
+                    <input id="fechaNacimiento" type="date">
+                </div>
+                <div>
+                    <label>Sexo</label>
+                    <select id="sexo">
+                        <option value="Masculino">Masculino</option>
+                        <option value="Femenino">Femenino</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Estado civil</label>
+                    <select id="estadoCivil">
+                        <option value="Soltero">Soltero</option>
+                        <option value="Casado">Casado</option>
+                        <option value="Viudo">Viudo</option>
+                        <option value="Divorciado">Divorciado</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-3">
+                <div>
+                    <label>Teléfono</label>
+                    <input id="telefono" type="text">
+                </div>
+                <div>
+                    <label>Correo electrónico</label>
+                    <input id="correoElectronico" type="email">
+                </div>
+                <div>
+                    <label>Tipo de sangre</label>
+                    <select id="tipoSangre">
+                        <option>A+</option><option>A-</option>
+                        <option>B+</option><option>B-</option>
+                        <option>AB+</option><option>AB-</option>
+                        <option>O+</option><option>O-</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div>
+                    <label>Ocupación</label>
+                    <input id="ocupacion" type="text">
+                </div>
+            </div>
+
+            <button type="submit">Guardar cambios</button>
+            <div id="mensajePaciente" class="mensaje"></div>
+        </form>
+    </section>
+</main>
+
+<script src="js/comun.js"></script>
+<script>
+    let pacienteActual = null;
+    const idPaciente = obtenerIdPacienteDeUrl();
+
+    if (!idPaciente) {
+        window.location.href = 'index.html';
+    } else {
+        document.getElementById('linkContactos').addEventListener('click', () => irAContactos(idPaciente));
+        cargarPaciente();
+    }
+
+    async function cargarPaciente() {
+        try {
+            const resp = await fetch(`${API_BASE}/${idPaciente}`);
+            if (!resp.ok) throw new Error('No se pudo cargar el paciente');
+            pacienteActual = await resp.json();
+            pintarFormulario(pacienteActual);
+        } catch (err) {
+            mostrarMensaje('mensajePaciente', err.message, 'error');
+        }
+    }
+
+    function pintarFormulario(p) {
+        document.getElementById('infoPaciente').textContent =
+            `Código: ${p.codigoPaciente ?? '-'} · Edad: ${p.edad ?? '-'} años`;
+
+        document.getElementById('tipoDocumento').value = p.tipoDocumento ?? 'DNI';
+        document.getElementById('numeroDocumento').value = p.numeroDocumento ?? '';
+        document.getElementById('estado').value = p.estado ?? 'Activo';
+        document.getElementById('nombres').value = p.nombres ?? '';
+        document.getElementById('apellidoPaterno').value = p.apellidoPaterno ?? '';
+        document.getElementById('apellidoMaterno').value = p.apellidoMaterno ?? '';
+        document.getElementById('fechaNacimiento').value = p.fechaNacimiento ? p.fechaNacimiento.substring(0, 10) : '';
+        document.getElementById('sexo').value = p.sexo ?? 'Masculino';
+        document.getElementById('estadoCivil').value = p.estadoCivil ?? 'Soltero';
+        document.getElementById('telefono').value = p.telefono ?? '';
+        document.getElementById('correoElectronico').value = p.correoElectronico ?? '';
+        document.getElementById('tipoSangre').value = p.tipoSangre ?? 'O+';
+        document.getElementById('ocupacion').value = p.ocupacion ?? '';
+    }
+
+    async function guardarPaciente(event) {
+        event.preventDefault();
+        if (!pacienteActual) return;
+
+        const payload = {
+            ...pacienteActual,
+            tipoDocumento: document.getElementById('tipoDocumento').value,
+            numeroDocumento: document.getElementById('numeroDocumento').value,
+            estado: document.getElementById('estado').value,
+            nombres: document.getElementById('nombres').value,
+            apellidoPaterno: document.getElementById('apellidoPaterno').value,
+            apellidoMaterno: document.getElementById('apellidoMaterno').value,
+            fechaNacimiento: document.getElementById('fechaNacimiento').value || null,
+            sexo: document.getElementById('sexo').value,
+            estadoCivil: document.getElementById('estadoCivil').value,
+            telefono: document.getElementById('telefono').value,
+            correoElectronico: document.getElementById('correoElectronico').value,
+            tipoSangre: document.getElementById('tipoSangre').value,
+            ocupacion: document.getElementById('ocupacion').value
+        };
+
+        try {
+            const resp = await fetch(`${API_BASE}/${idPaciente}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) throw new Error('El servidor respondió con error ' + resp.status);
+            pacienteActual = await resp.json();
+            pintarFormulario(pacienteActual);
+            mostrarMensaje('mensajePaciente', 'Datos del paciente actualizados correctamente.', 'ok');
+        } catch (err) {
+            mostrarMensaje('mensajePaciente', 'No se pudo guardar: ' + err.message, 'error');
+        }
+    }
+</script>
+
+</body>
+</html>

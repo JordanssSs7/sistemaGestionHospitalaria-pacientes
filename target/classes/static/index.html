@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pacientes - Buscar</title>
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+<header>
+    <h1>Módulo de Pacientes</h1>
+    <p>Edición de datos del paciente (RF-PAC-08) y contactos de emergencia (RF-PAC-10)</p>
+</header>
+
+<main>
+    <section>
+        <h2>Buscar paciente</h2>
+        <div class="fila-busqueda">
+            <div>
+                <label for="inputBusqueda">N.º de documento</label>
+                <input id="inputBusqueda" type="text" placeholder="Ej: 71234567">
+            </div>
+            <button onclick="buscarPaciente()">Buscar</button>
+        </div>
+        <div id="mensajeBusqueda" class="mensaje"></div>
+    </section>
+</main>
+
+<script src="js/comun.js"></script>
+<script>
+    async function buscarPaciente() {
+        const documento = document.getElementById('inputBusqueda').value.trim();
+        if (!documento) {
+            mostrarMensaje('mensajeBusqueda', 'Ingresa un número de documento.', 'error');
+            return;
+        }
+        try {
+            const resp = await fetch(`${API_BASE}/documento/${encodeURIComponent(documento)}`);
+            if (resp.status === 404) {
+                mostrarMensaje('mensajeBusqueda', 'No se encontró ningún paciente con ese documento.', 'error');
+                return;
+            }
+            if (!resp.ok) throw new Error('Error al buscar paciente');
+
+            const paciente = await resp.json();
+            irAPaciente(paciente.idPaciente);
+        } catch (err) {
+            mostrarMensaje('mensajeBusqueda', 'Error de conexión con la API: ' + err.message, 'error');
+        }
+    }
+
+    document.getElementById('inputBusqueda').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') buscarPaciente();
+    });
+</script>
+
+</body>
+</html>
