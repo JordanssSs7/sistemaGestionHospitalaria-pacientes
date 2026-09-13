@@ -29,9 +29,14 @@ public class PacienteService {
         return pacienteRepository.save(paciente);
     }
 
-    // RF-PAC-06: Listar todos
+    // Listar todos (menú "Listar pacientes")
     public List<Paciente> listarTodos() {
         return pacienteRepository.findAll();
+    }
+
+    // RF-PAC-06: Mostrar la información completa de un paciente puntual
+    public Optional<Paciente> buscarPorId(Integer idPaciente) {
+        return pacienteRepository.findById(idPaciente);
     }
 
     // RF-PAC-05: Buscar pacientes por documento, código, nombres y apellidos

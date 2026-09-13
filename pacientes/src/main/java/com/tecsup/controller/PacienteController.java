@@ -34,6 +34,14 @@ public class PacienteController {
         return new ResponseEntity<>(pacienteService.listarTodos(), HttpStatus.OK);
     }
 
+    // RF-PAC-06: mostrar la información completa de un paciente (GET)
+    @GetMapping("/{id}")
+    public ResponseEntity<Paciente> obtenerPaciente(@PathVariable Integer id) {
+        Optional<Paciente> paciente = pacienteService.buscarPorId(id);
+        return paciente.map(p -> new ResponseEntity<>(p, HttpStatus.OK))
+                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+
     // Endpoint para buscar por documento (GET)
     @GetMapping("/documento/{numeroDocumento}")
     public ResponseEntity<Paciente> buscarPorDocumento(@PathVariable String numeroDocumento) {
