@@ -1,17 +1,16 @@
 package com.tecsup.service;
 
-import com.tecsup.exception.ReglaNegocioException;
 import com.tecsup.model.Alergia;
 import com.tecsup.model.Direccion;
 import com.tecsup.model.Paciente;
 import com.tecsup.repository.AlergiaRepository;
 import com.tecsup.repository.PacienteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -68,32 +67,31 @@ public class PacienteService {
             return;
         }
         if (!valor.trim().matches("^\\p{L}+([ '\\-]\\p{L}+)*$")) {
-            throw new ReglaNegocioException(HttpStatus.BAD_REQUEST,
-                    etiqueta + " solo pueden contener letras, sin números ni símbolos.");
+            throw new IllegalArgumentException(etiqueta + " solo pueden contener letras, sin números ni símbolos.");
         }
     }
 
     // Valida los datos obligatorios y que el documento no pertenezca a otro paciente
     private void validarPaciente(Paciente paciente, Integer idActual) {
         if (paciente.getNumeroDocumento() == null || paciente.getNumeroDocumento().isBlank()) {
-            throw new ReglaNegocioException(HttpStatus.BAD_REQUEST, "El número de documento es obligatorio.");
+            throw new IllegalArgumentException("El número de documento es obligatorio.");
         }
         if (paciente.getNombres() == null || paciente.getNombres().isBlank()) {
-            throw new ReglaNegocioException(HttpStatus.BAD_REQUEST, "Los nombres son obligatorios.");
+            throw new IllegalArgumentException("Los nombres son obligatorios.");
         }
         validarSoloLetras(paciente.getNombres(), "Los nombres");
         validarSoloLetras(paciente.getApellidoPaterno(), "El apellido paterno");
         validarSoloLetras(paciente.getApellidoMaterno(), "El apellido materno");
         String correo = paciente.getCorreoElectronico();
         if (correo != null && !correo.isBlank() && !correo.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
-            throw new ReglaNegocioException(HttpStatus.BAD_REQUEST, "El correo electrónico no tiene un formato válido.");
+            throw new IllegalArgumentException("El correo electrónico no tiene un formato válido.");
         }
         String documento = paciente.getNumeroDocumento().trim();
         paciente.setNumeroDocumento(documento);
         pacienteRepository.findByNumeroDocumento(documento).ifPresent(existente -> {
             if (!existente.getIdPaciente().equals(idActual)) {
-                throw new ReglaNegocioException(HttpStatus.CONFLICT,
-                        "Ya existe un paciente registrado con el documento " + documento + ".");
+                // RF-PAC-02: el documento ya está registrado en otro paciente
+                throw new IllegalStateException("Ya existe un paciente registrado con el documento " + documento + ".");
             }
         });
     }
@@ -135,7 +133,7 @@ public class PacienteService {
             case "Documento" -> pacienteRepository.findByNumeroDocumentoContaining(termino);
             case "Código" -> pacienteRepository.findByCodigoPacienteContainingIgnoreCase(termino);
             case "Todos" -> pacienteRepository.buscarPacienteGlobal(termino);
-            default -> throw new ReglaNegocioException(HttpStatus.BAD_REQUEST, "Filtro de búsqueda no válido: " + campo);
+            default -> throw new IllegalArgumentException("Filtro de búsqueda no válido: " + campo);
         };
     }
 
@@ -147,8 +145,7 @@ public class PacienteService {
     // RF-PAC-08: modificar datos del paciente
     public Paciente actualizarPaciente(Integer idPaciente, Paciente datosActualizados) {
         Paciente paciente = pacienteRepository.findById(idPaciente)
-                .orElseThrow(() -> new ReglaNegocioException(HttpStatus.NOT_FOUND,
-                        "Paciente no encontrado con id: " + idPaciente));
+                .orElseThrow(() -> new NoSuchElementException("Paciente no encontrado con id: " + idPaciente));
         validarPaciente(datosActualizados, idPaciente);
 
         paciente.setTipoDocumento(datosActualizados.getTipoDocumento());

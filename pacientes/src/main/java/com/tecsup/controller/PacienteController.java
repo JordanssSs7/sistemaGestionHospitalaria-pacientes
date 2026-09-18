@@ -3,11 +3,14 @@ package com.tecsup.controller;
 import com.tecsup.model.Paciente;
 import com.tecsup.service.PacienteService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @RestController
@@ -23,9 +26,20 @@ public class PacienteController {
 
     // Endpoint para registrar un paciente (POST)
     @PostMapping
-    public ResponseEntity<Paciente> registrarPaciente(@RequestBody Paciente paciente) {
-        Paciente nuevoPaciente = pacienteService.registrarPaciente(paciente);
-        return new ResponseEntity<>(nuevoPaciente, HttpStatus.CREATED);
+    public ResponseEntity<?> registrarPaciente(@RequestBody Paciente paciente) {
+        try {
+            Paciente nuevoPaciente = pacienteService.registrarPaciente(paciente);
+            return new ResponseEntity<>(nuevoPaciente, HttpStatus.CREATED);
+        } catch (IllegalStateException e) {
+            // RF-PAC-02: documento ya registrado
+            return new ResponseEntity<>(Map.of("mensaje", e.getMessage()), HttpStatus.CONFLICT);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("mensaje", e.getMessage()), HttpStatus.BAD_REQUEST);
+        } catch (DataIntegrityViolationException e) {
+            return new ResponseEntity<>(Map.of("mensaje",
+                    "Los datos entran en conflicto con un registro existente (documento o código duplicado)."),
+                    HttpStatus.CONFLICT);
+        }
     }
 
     // Endpoint para listar todos los pacientes (GET)
@@ -58,19 +72,35 @@ public class PacienteController {
 
     // Endpoint para RF-PAC-05
     @GetMapping("/buscar")
-    public ResponseEntity<List<Paciente>> buscarPaciente(@RequestParam String termino,
-                                                         @RequestParam(required = false) String campo) {
-        List<Paciente> pacientes = pacienteService.buscarPorCampo(campo, termino);
-        if(pacientes.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    public ResponseEntity<?> buscarPaciente(@RequestParam String termino,
+                                             @RequestParam(required = false) String campo) {
+        try {
+            List<Paciente> pacientes = pacienteService.buscarPorCampo(campo, termino);
+            if (pacientes.isEmpty()) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            return new ResponseEntity<>(pacientes, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("mensaje", e.getMessage()), HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(pacientes, HttpStatus.OK);
     }
 
     // RF-PAC-08: actualizar datos del paciente (PUT)
     @PutMapping("/{id}")
-    public ResponseEntity<Paciente> actualizarPaciente(@PathVariable Integer id, @RequestBody Paciente paciente) {
-        Paciente actualizado = pacienteService.actualizarPaciente(id, paciente);
-        return new ResponseEntity<>(actualizado, HttpStatus.OK);
+    public ResponseEntity<?> actualizarPaciente(@PathVariable Integer id, @RequestBody Paciente paciente) {
+        try {
+            Paciente actualizado = pacienteService.actualizarPaciente(id, paciente);
+            return new ResponseEntity<>(actualizado, HttpStatus.OK);
+        } catch (NoSuchElementException e) {
+            return new ResponseEntity<>(Map.of("mensaje", e.getMessage()), HttpStatus.NOT_FOUND);
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(Map.of("mensaje", e.getMessage()), HttpStatus.CONFLICT);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("mensaje", e.getMessage()), HttpStatus.BAD_REQUEST);
+        } catch (DataIntegrityViolationException e) {
+            return new ResponseEntity<>(Map.of("mensaje",
+                    "Los datos entran en conflicto con un registro existente (documento o código duplicado)."),
+                    HttpStatus.CONFLICT);
+        }
     }
 }
