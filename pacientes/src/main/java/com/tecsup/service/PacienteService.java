@@ -8,6 +8,7 @@ import com.tecsup.repository.PacienteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,14 +30,16 @@ public class PacienteService {
     // El front solo manda el id de cada alergia seleccionada; buscamos las entidades
     // ya persistidas para que el @ManyToMany (sin cascade) las enlace correctamente.
     private List<Alergia> resolverAlergias(List<Alergia> alergiasRecibidas) {
+        // Hibernate necesita poder hacer clear()/limpiar esta lista al sincronizarla,
+        // así que debe ser mutable (List.of() es inmutable y rompe con UnsupportedOperationException).
         if (alergiasRecibidas == null || alergiasRecibidas.isEmpty()) {
-            return List.of();
+            return new ArrayList<>();
         }
         List<Integer> ids = alergiasRecibidas.stream()
                 .map(Alergia::getIdAlergia)
                 .filter(id -> id != null)
                 .collect(Collectors.toList());
-        return alergiaRepository.findAllById(ids);
+        return new ArrayList<>(alergiaRepository.findAllById(ids));
     }
 
     // Copia los campos sobre la Direccion ya cargada en vez de reemplazar el objeto completo:
