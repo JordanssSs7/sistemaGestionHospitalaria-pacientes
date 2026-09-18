@@ -138,6 +138,50 @@
                 </div>
             </div>
 
+            <div class="seccion-form">Dirección</div>
+            <div class="grid-2">
+                <div>
+                    <label>Dirección</label>
+                    <input id="direccion" type="text" placeholder="Av., calle, número...">
+                </div>
+                <div>
+                    <label>Distrito</label>
+                    <input id="distrito" type="text">
+                </div>
+            </div>
+            <div class="grid-2">
+                <div>
+                    <label>Provincia</label>
+                    <input id="provincia" type="text">
+                </div>
+                <div>
+                    <label>Departamento</label>
+                    <input id="departamento" type="text">
+                </div>
+            </div>
+
+            <div class="seccion-form">Alergias</div>
+            <div id="listaAlergias" class="alergias-lista">
+                <span style="color:#888; font-size:13px;">Cargando catálogo de alergias...</span>
+            </div>
+            <div class="agregar-alergia">
+                <div>
+                    <label>Agregar alergia nueva al catálogo</label>
+                    <input id="nuevaAlergiaNombre" type="text" placeholder="Ej: Penicilina">
+                </div>
+                <div>
+                    <label>Tipo</label>
+                    <select id="nuevaAlergiaTipo">
+                        <option value="Medicamento">Medicamento</option>
+                        <option value="Alimento">Alimento</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <button type="button" class="secundario" onclick="agregarAlergiaAlCatalogo()">
+                    <i class="fa-solid fa-plus"></i> Agregar
+                </button>
+            </div>
+
             <button type="submit">
                 <i class="fa-solid fa-check"></i>
                 Guardar cambios
@@ -158,7 +202,7 @@
         window.location.href = 'buscar.html';
     } else {
         document.getElementById('btnIrContactos').addEventListener('click', () => irAContactos(idPaciente));
-        cargarPaciente();
+        Promise.all([cargarPaciente(), cargarCatalogoAlergias()]).then(marcarAlergiasSeleccionadas);
     }
 
     async function cargarPaciente() {
@@ -171,6 +215,59 @@
         } catch (err) {
             mostrarMensaje('mensajePaciente', err.message, 'error');
         }
+    }
+
+    async function cargarCatalogoAlergias() {
+        const cont = document.getElementById('listaAlergias');
+        try {
+            const resp = await fetch('/api/alergias');
+            if (!resp.ok) throw new Error('No se pudo cargar el catálogo');
+            const alergias = await resp.json();
+            if (alergias.length === 0) {
+                cont.innerHTML = '<span style="color:#888; font-size:13px;">Todavía no hay alergias en el catálogo. Agrega la primera abajo.</span>';
+                return;
+            }
+            cont.innerHTML = alergias.map(a => `
+                <label class="alergia-chip">
+                    <input type="checkbox" value="${a.idAlergia}">
+                    ${escapeHtml(a.nombre)} <span style="opacity:.7;">(${escapeHtml(a.tipo ?? '-')})</span>
+                </label>
+            `).join('');
+        } catch (err) {
+            cont.innerHTML = `<span style="color:#b91c1c; font-size:13px;">${err.message}</span>`;
+        }
+    }
+
+    function marcarAlergiasSeleccionadas() {
+        const idsPaciente = (pacienteActual?.alergias ?? []).map(a => String(a.idAlergia));
+        document.querySelectorAll('#listaAlergias input[type="checkbox"]').forEach(chk => {
+            chk.checked = idsPaciente.includes(chk.value);
+        });
+    }
+
+    async function agregarAlergiaAlCatalogo() {
+        const nombre = document.getElementById('nuevaAlergiaNombre').value.trim();
+        if (!nombre) return;
+        const tipo = document.getElementById('nuevaAlergiaTipo').value;
+
+        try {
+            const resp = await fetch('/api/alergias', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre, tipo })
+            });
+            if (!resp.ok) throw new Error('No se pudo agregar la alergia');
+            document.getElementById('nuevaAlergiaNombre').value = '';
+            await cargarCatalogoAlergias();
+            marcarAlergiasSeleccionadas();
+        } catch (err) {
+            mostrarMensaje('mensajePaciente', err.message, 'error');
+        }
+    }
+
+    function obtenerAlergiasSeleccionadas() {
+        return Array.from(document.querySelectorAll('#listaAlergias input[type="checkbox"]:checked'))
+            .map(chk => ({ idAlergia: parseInt(chk.value, 10) }));
     }
 
     function pintarResumen(p) {
@@ -197,6 +294,12 @@
         document.getElementById('correoElectronico').value = p.correoElectronico ?? '';
         document.getElementById('tipoSangre').value = p.tipoSangre ?? 'O+';
         document.getElementById('ocupacion').value = p.ocupacion ?? '';
+
+        const dir = p.direccion ?? {};
+        document.getElementById('direccion').value = dir.direccion ?? '';
+        document.getElementById('distrito').value = dir.distrito ?? '';
+        document.getElementById('provincia').value = dir.provincia ?? '';
+        document.getElementById('departamento').value = dir.departamento ?? '';
     }
 
     async function guardarPaciente(event) {
@@ -217,7 +320,15 @@
             telefono: document.getElementById('telefono').value,
             correoElectronico: document.getElementById('correoElectronico').value,
             tipoSangre: document.getElementById('tipoSangre').value,
-            ocupacion: document.getElementById('ocupacion').value
+            ocupacion: document.getElementById('ocupacion').value,
+            direccion: {
+                ...(pacienteActual.direccion ?? {}),
+                direccion: document.getElementById('direccion').value,
+                distrito: document.getElementById('distrito').value,
+                provincia: document.getElementById('provincia').value,
+                departamento: document.getElementById('departamento').value
+            },
+            alergias: obtenerAlergiasSeleccionadas()
         };
 
         try {
@@ -230,6 +341,7 @@
             pacienteActual = await resp.json();
             pintarResumen(pacienteActual);
             pintarFormulario(pacienteActual);
+            marcarAlergiasSeleccionadas();
             mostrarMensaje('mensajePaciente', 'Datos del paciente actualizados correctamente.', 'ok');
         } catch (err) {
             mostrarMensaje('mensajePaciente', 'No se pudo guardar: ' + err.message, 'error');

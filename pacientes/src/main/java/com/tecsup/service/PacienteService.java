@@ -1,6 +1,9 @@
 package com.tecsup.service;
 
+import com.tecsup.model.Alergia;
+import com.tecsup.model.Direccion;
 import com.tecsup.model.Paciente;
+import com.tecsup.repository.AlergiaRepository;
 import com.tecsup.repository.PacienteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -8,16 +11,50 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class PacienteService {
 
     private final PacienteRepository pacienteRepository;
+    private final AlergiaRepository alergiaRepository;
 
     // Inyección de dependencias (DI) mediante constructor
     @Autowired
-    public PacienteService(PacienteRepository pacienteRepository) {
+    public PacienteService(PacienteRepository pacienteRepository, AlergiaRepository alergiaRepository) {
         this.pacienteRepository = pacienteRepository;
+        this.alergiaRepository = alergiaRepository;
+    }
+
+    // El front solo manda el id de cada alergia seleccionada; buscamos las entidades
+    // ya persistidas para que el @ManyToMany (sin cascade) las enlace correctamente.
+    private List<Alergia> resolverAlergias(List<Alergia> alergiasRecibidas) {
+        if (alergiasRecibidas == null || alergiasRecibidas.isEmpty()) {
+            return List.of();
+        }
+        List<Integer> ids = alergiasRecibidas.stream()
+                .map(Alergia::getIdAlergia)
+                .filter(id -> id != null)
+                .collect(Collectors.toList());
+        return alergiaRepository.findAllById(ids);
+    }
+
+    // Copia los campos sobre la Direccion ya cargada en vez de reemplazar el objeto completo:
+    // si se asigna un objeto Direccion nuevo con el mismo id que uno ya presente en el
+    // contexto de persistencia, Hibernate lanza NonUniqueObjectException.
+    private void actualizarDireccion(Paciente paciente, Direccion direccionRecibida) {
+        if (direccionRecibida == null) {
+            return;
+        }
+        Direccion direccionActual = paciente.getDireccion();
+        if (direccionActual == null) {
+            direccionActual = new Direccion();
+            paciente.setDireccion(direccionActual);
+        }
+        direccionActual.setDireccion(direccionRecibida.getDireccion());
+        direccionActual.setDistrito(direccionRecibida.getDistrito());
+        direccionActual.setProvincia(direccionRecibida.getProvincia());
+        direccionActual.setDepartamento(direccionRecibida.getDepartamento());
     }
 
     // RF-PAC-01 y RF-PAC-04: Registrar paciente
@@ -26,6 +63,7 @@ public class PacienteService {
         if (paciente.getCodigoPaciente() == null || paciente.getCodigoPaciente().isEmpty()) {
             paciente.setCodigoPaciente("PAC-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         }
+        paciente.setAlergias(resolverAlergias(paciente.getAlergias()));
         return pacienteRepository.save(paciente);
     }
 
@@ -66,6 +104,8 @@ public class PacienteService {
         paciente.setOcupacion(datosActualizados.getOcupacion());
         paciente.setTipoSangre(datosActualizados.getTipoSangre());
         paciente.setEstado(datosActualizados.getEstado());
+        actualizarDireccion(paciente, datosActualizados.getDireccion());
+        paciente.setAlergias(resolverAlergias(datosActualizados.getAlergias()));
 
         return pacienteRepository.save(paciente);
     }
