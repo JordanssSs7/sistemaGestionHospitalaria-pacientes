@@ -1,11 +1,13 @@
 package com.tecsup.service;
 
+import com.tecsup.exception.ReglaNegocioException;
 import com.tecsup.model.Alergia;
 import com.tecsup.model.Direccion;
 import com.tecsup.model.Paciente;
 import com.tecsup.repository.AlergiaRepository;
 import com.tecsup.repository.PacienteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -60,8 +62,45 @@ public class PacienteService {
         direccionActual.setDepartamento(direccionRecibida.getDepartamento());
     }
 
+    // Nombres y apellidos: solo letras (con tildes/ñ), espacios, guion y apóstrofe. Vacío se permite (campo opcional).
+    private void validarSoloLetras(String valor, String etiqueta) {
+        if (valor == null || valor.isBlank()) {
+            return;
+        }
+        if (!valor.trim().matches("^\\p{L}+([ '\\-]\\p{L}+)*$")) {
+            throw new ReglaNegocioException(HttpStatus.BAD_REQUEST,
+                    etiqueta + " solo pueden contener letras, sin números ni símbolos.");
+        }
+    }
+
+    // Valida los datos obligatorios y que el documento no pertenezca a otro paciente
+    private void validarPaciente(Paciente paciente, Integer idActual) {
+        if (paciente.getNumeroDocumento() == null || paciente.getNumeroDocumento().isBlank()) {
+            throw new ReglaNegocioException(HttpStatus.BAD_REQUEST, "El número de documento es obligatorio.");
+        }
+        if (paciente.getNombres() == null || paciente.getNombres().isBlank()) {
+            throw new ReglaNegocioException(HttpStatus.BAD_REQUEST, "Los nombres son obligatorios.");
+        }
+        validarSoloLetras(paciente.getNombres(), "Los nombres");
+        validarSoloLetras(paciente.getApellidoPaterno(), "El apellido paterno");
+        validarSoloLetras(paciente.getApellidoMaterno(), "El apellido materno");
+        String correo = paciente.getCorreoElectronico();
+        if (correo != null && !correo.isBlank() && !correo.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new ReglaNegocioException(HttpStatus.BAD_REQUEST, "El correo electrónico no tiene un formato válido.");
+        }
+        String documento = paciente.getNumeroDocumento().trim();
+        paciente.setNumeroDocumento(documento);
+        pacienteRepository.findByNumeroDocumento(documento).ifPresent(existente -> {
+            if (!existente.getIdPaciente().equals(idActual)) {
+                throw new ReglaNegocioException(HttpStatus.CONFLICT,
+                        "Ya existe un paciente registrado con el documento " + documento + ".");
+            }
+        });
+    }
+
     // RF-PAC-01 y RF-PAC-04: Registrar paciente
     public Paciente registrarPaciente(Paciente paciente) {
+        validarPaciente(paciente, null);
         // RF-PAC-03: Generar código único automáticamente
         if (paciente.getCodigoPaciente() == null || paciente.getCodigoPaciente().isEmpty()) {
             paciente.setCodigoPaciente("PAC-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
@@ -84,6 +123,22 @@ public class PacienteService {
     public List<Paciente> buscarGlobal(String termino) {
         return pacienteRepository.buscarPacienteGlobal(termino);
     }
+    // RF-PAC-05: Buscar limitando la búsqueda a un campo (null o "Todos" = búsqueda global)
+    public List<Paciente> buscarPorCampo(String campo, String termino) {
+        if (campo == null) {
+            return pacienteRepository.buscarPacienteGlobal(termino);
+        }
+        return switch (campo) {
+            case "Nombre" -> pacienteRepository.findByNombresContainingIgnoreCase(termino);
+            case "Apellido" -> pacienteRepository
+                    .findByApellidoPaternoContainingIgnoreCaseOrApellidoMaternoContainingIgnoreCase(termino, termino);
+            case "Documento" -> pacienteRepository.findByNumeroDocumentoContaining(termino);
+            case "Código" -> pacienteRepository.findByCodigoPacienteContainingIgnoreCase(termino);
+            case "Todos" -> pacienteRepository.buscarPacienteGlobal(termino);
+            default -> throw new ReglaNegocioException(HttpStatus.BAD_REQUEST, "Filtro de búsqueda no válido: " + campo);
+        };
+    }
+
     // RF-PAC-05: Buscar por documento específico
     public Optional<Paciente> buscarPorDocumento(String documento) {
         return pacienteRepository.findByNumeroDocumento(documento);
@@ -92,7 +147,9 @@ public class PacienteService {
     // RF-PAC-08: modificar datos del paciente
     public Paciente actualizarPaciente(Integer idPaciente, Paciente datosActualizados) {
         Paciente paciente = pacienteRepository.findById(idPaciente)
-                .orElseThrow(() -> new RuntimeException("Paciente no encontrado con id: " + idPaciente));
+                .orElseThrow(() -> new ReglaNegocioException(HttpStatus.NOT_FOUND,
+                        "Paciente no encontrado con id: " + idPaciente));
+        validarPaciente(datosActualizados, idPaciente);
 
         paciente.setTipoDocumento(datosActualizados.getTipoDocumento());
         paciente.setNumeroDocumento(datosActualizados.getNumeroDocumento());

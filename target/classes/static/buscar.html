@@ -82,7 +82,7 @@
             return;
         }
         try {
-            const resp = await fetch(`${API_BASE}/buscar?termino=${encodeURIComponent(termino)}&campo=${encodeURIComponent(filtroActivo)}`);
+            const resp = await fetch(`${API_BASE}/buscar?termino=${encodeURIComponent(termino)}`);
             if (resp.status === 404) {
                 document.getElementById('mensajeBusqueda').className = 'mensaje';
                 lista.innerHTML = `
@@ -92,7 +92,7 @@
                     </div>`;
                 return;
             }
-            if (!resp.ok) throw new Error(await leerErrorApi(resp));
+            if (!resp.ok) throw new Error('Error al buscar pacientes');
 
             const pacientes = await resp.json();
             document.getElementById('mensajeBusqueda').className = 'mensaje';

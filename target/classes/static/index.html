@@ -3,56 +3,125 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pacientes - Buscar</title>
+<title>Pacientes - Inicio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body>
 
-<header>
-    <h1>Módulo de Pacientes</h1>
-    <p>Edición de datos del paciente (RF-PAC-08) y contactos de emergencia (RF-PAC-10)</p>
-</header>
+<div class="navbar">
+    <a href="index.html" class="logo">
+        <span class="icono"><i class="fa-solid fa-hospital"></i></span>
+        Módulo Pacientes
+    </a>
+    <nav>
+        <a href="registrar.html"><i class="fa-solid fa-user-plus"></i> Registrar</a>
+        <a href="buscar.html"><i class="fa-solid fa-magnifying-glass"></i> Buscar</a>
+    </nav>
+</div>
 
-<main>
-    <section>
-        <h2>Buscar paciente</h2>
-        <div class="fila-busqueda">
-            <div>
-                <label for="inputBusqueda">N.º de documento</label>
-                <input id="inputBusqueda" type="text" placeholder="Ej: 71234567">
-            </div>
-            <button onclick="buscarPaciente()">Buscar</button>
+<div class="contenido">
+    <div class="hero">
+        <h1>¿Qué deseas hacer?</h1>
+        <p>Gestiona el registro de pacientes, su información y sus contactos de emergencia.</p>
+
+        <form class="busqueda-hero" onsubmit="buscarDesdeHome(event)">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input id="inputBusquedaHome" type="text" placeholder="Buscar por nombre, apellido, documento o código...">
+            <button type="submit">Buscar</button>
+        </form>
+    </div>
+
+    <div class="acciones-grid">
+        <a href="registrar.html" class="accion-card registrar">
+            <div class="icono-grande"><i class="fa-solid fa-user-plus"></i></div>
+            <h3>Registrar paciente</h3>
+            <p>Da de alta un nuevo paciente con sus datos personales y de contacto.</p>
+            <span class="ir">Empezar <i class="fa-solid fa-arrow-right"></i></span>
+        </a>
+
+        <a href="buscar.html" class="accion-card buscar">
+            <div class="icono-grande"><i class="fa-solid fa-magnifying-glass"></i></div>
+            <h3>Buscar paciente</h3>
+            <p>Encuentra un paciente por nombre, apellido, documento o código, edita sus datos o revisa sus contactos de emergencia.</p>
+            <span class="ir">Buscar ahora <i class="fa-solid fa-arrow-right"></i></span>
+        </a>
+    </div>
+
+    <div class="card">
+        <h2><i class="fa-solid fa-clock-rotate-left"></i> Historial de pacientes registrados</h2>
+        <div class="tabla-wrap">
+            <table class="historial">
+                <thead>
+                    <tr>
+                        <th>Paciente</th>
+                        <th>Documento</th>
+                        <th>Código</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoHistorial">
+                    <tr><td colspan="5" style="color:#888; text-align:center; padding:24px;">Cargando pacientes...</td></tr>
+                </tbody>
+            </table>
         </div>
-        <div id="mensajeBusqueda" class="mensaje"></div>
-    </section>
-</main>
+    </div>
+
+    <div id="pieDePagina"></div>
+</div>
 
 <script src="js/comun.js"></script>
 <script>
-    async function buscarPaciente() {
-        const documento = document.getElementById('inputBusqueda').value.trim();
-        if (!documento) {
-            mostrarMensaje('mensajeBusqueda', 'Ingresa un número de documento.', 'error');
-            return;
-        }
+    function buscarDesdeHome(event) {
+        event.preventDefault();
+        const termino = document.getElementById('inputBusquedaHome').value.trim();
+        if (!termino) return;
+        window.location.href = `buscar.html?q=${encodeURIComponent(termino)}`;
+    }
+
+    async function cargarHistorial() {
+        const cuerpo = document.getElementById('cuerpoHistorial');
         try {
-            const resp = await fetch(`${API_BASE}/documento/${encodeURIComponent(documento)}`);
-            if (resp.status === 404) {
-                mostrarMensaje('mensajeBusqueda', 'No se encontró ningún paciente con ese documento.', 'error');
+            const resp = await fetch(API_BASE);
+            if (!resp.ok) throw new Error('No se pudo cargar el historial');
+            const pacientes = await resp.json();
+
+            if (pacientes.length === 0) {
+                cuerpo.innerHTML = `<tr><td colspan="5"><div class="vacio"><i class="fa-solid fa-folder-open"></i>Todavía no hay pacientes registrados.</div></td></tr>`;
                 return;
             }
-            if (!resp.ok) throw new Error('Error al buscar paciente');
 
-            const paciente = await resp.json();
-            irAPaciente(paciente.idPaciente);
+            cuerpo.innerHTML = '';
+            pacientes.forEach(p => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>
+                        <div class="celda-paciente">
+                            <div class="avatar">${iniciales(p.nombres, p.apellidoPaterno)}</div>
+                            <span>${escapeHtml(p.nombres ?? '')} ${escapeHtml(p.apellidoPaterno ?? '')}</span>
+                        </div>
+                    </td>
+                    <td>${escapeHtml(p.numeroDocumento ?? '-')}</td>
+                    <td>${escapeHtml(p.codigoPaciente ?? '-')}</td>
+                    <td><span class="badge ${p.estado === 'Activo' ? 'si' : 'no'}">${escapeHtml(p.estado ?? '-')}</span></td>
+                    <td>
+                        <button class="icon-btn" title="Ver ficha" onclick="irAPaciente(${p.idPaciente})">
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </td>
+                `;
+                cuerpo.appendChild(fila);
+            });
         } catch (err) {
-            mostrarMensaje('mensajeBusqueda', 'Error de conexión con la API: ' + err.message, 'error');
+            cuerpo.innerHTML = `<tr><td colspan="5" style="color:#b91c1c; text-align:center; padding:20px;">${err.message}</td></tr>`;
         }
     }
 
-    document.getElementById('inputBusqueda').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') buscarPaciente();
-    });
+    cargarHistorial();
 </script>
 
 </body>

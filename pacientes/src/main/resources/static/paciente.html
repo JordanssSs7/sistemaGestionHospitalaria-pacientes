@@ -76,15 +76,15 @@
             <div class="grid-3">
                 <div>
                     <label>Nombres</label>
-                    <input id="nombres" type="text" required>
+                    <input id="nombres" type="text" required pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' \-]+" title="Solo letras, sin números">
                 </div>
                 <div>
                     <label>Apellido paterno</label>
-                    <input id="apellidoPaterno" type="text">
+                    <input id="apellidoPaterno" type="text" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' \-]+" title="Solo letras, sin números">
                 </div>
                 <div>
                     <label>Apellido materno</label>
-                    <input id="apellidoMaterno" type="text">
+                    <input id="apellidoMaterno" type="text" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' \-]+" title="Solo letras, sin números">
                 </div>
             </div>
             <div class="grid-3">
@@ -337,7 +337,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (!resp.ok) throw new Error('El servidor respondió con error ' + resp.status);
+            if (!resp.ok) throw new Error(await leerErrorApi(resp));
             pacienteActual = await resp.json();
             pintarResumen(pacienteActual);
             pintarFormulario(pacienteActual);

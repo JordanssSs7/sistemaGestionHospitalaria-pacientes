@@ -57,15 +57,15 @@
             <div class="grid-3">
                 <div>
                     <label>Nombres</label>
-                    <input id="nombres" type="text" required pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' \-]+" title="Solo letras, sin números">
+                    <input id="nombres" type="text" required>
                 </div>
                 <div>
                     <label>Apellido paterno</label>
-                    <input id="apellidoPaterno" type="text" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' \-]+" title="Solo letras, sin números">
+                    <input id="apellidoPaterno" type="text">
                 </div>
                 <div>
                     <label>Apellido materno</label>
-                    <input id="apellidoMaterno" type="text" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' \-]+" title="Solo letras, sin números">
+                    <input id="apellidoMaterno" type="text">
                 </div>
             </div>
             <div class="grid-3">
@@ -119,50 +119,6 @@
                 </div>
             </div>
 
-            <div class="seccion-form">Dirección</div>
-            <div class="grid-2">
-                <div>
-                    <label>Dirección</label>
-                    <input id="direccion" type="text" placeholder="Av., calle, número...">
-                </div>
-                <div>
-                    <label>Distrito</label>
-                    <input id="distrito" type="text">
-                </div>
-            </div>
-            <div class="grid-2">
-                <div>
-                    <label>Provincia</label>
-                    <input id="provincia" type="text">
-                </div>
-                <div>
-                    <label>Departamento</label>
-                    <input id="departamento" type="text">
-                </div>
-            </div>
-
-            <div class="seccion-form">Alergias</div>
-            <div id="listaAlergias" class="alergias-lista">
-                <span style="color:#888; font-size:13px;">Cargando catálogo de alergias...</span>
-            </div>
-            <div class="agregar-alergia">
-                <div>
-                    <label>Agregar alergia nueva al catálogo</label>
-                    <input id="nuevaAlergiaNombre" type="text" placeholder="Ej: Penicilina">
-                </div>
-                <div>
-                    <label>Tipo</label>
-                    <select id="nuevaAlergiaTipo">
-                        <option value="Medicamento">Medicamento</option>
-                        <option value="Alimento">Alimento</option>
-                        <option value="Otro">Otro</option>
-                    </select>
-                </div>
-                <button type="button" class="secundario" onclick="agregarAlergiaAlCatalogo()">
-                    <i class="fa-solid fa-plus"></i> Agregar
-                </button>
-            </div>
-
             <button type="submit">
                 <i class="fa-solid fa-check"></i>
                 Registrar paciente
@@ -176,58 +132,6 @@
 
 <script src="js/comun.js"></script>
 <script>
-    async function cargarCatalogoAlergias() {
-        const cont = document.getElementById('listaAlergias');
-        try {
-            const resp = await fetch('/api/alergias');
-            if (!resp.ok) throw new Error('No se pudo cargar el catálogo');
-            const alergias = await resp.json();
-            pintarCatalogoAlergias(alergias);
-        } catch (err) {
-            cont.innerHTML = `<span style="color:#b91c1c; font-size:13px;">${err.message}</span>`;
-        }
-    }
-
-    function pintarCatalogoAlergias(alergias) {
-        const cont = document.getElementById('listaAlergias');
-        if (alergias.length === 0) {
-            cont.innerHTML = '<span style="color:#888; font-size:13px;">Todavía no hay alergias en el catálogo. Agrega la primera abajo.</span>';
-            return;
-        }
-        cont.innerHTML = alergias.map(a => `
-            <label class="alergia-chip">
-                <input type="checkbox" value="${a.idAlergia}">
-                ${escapeHtml(a.nombre)} <span style="opacity:.7;">(${escapeHtml(a.tipo ?? '-')})</span>
-            </label>
-        `).join('');
-    }
-
-    async function agregarAlergiaAlCatalogo() {
-        const nombre = document.getElementById('nuevaAlergiaNombre').value.trim();
-        if (!nombre) return;
-        const tipo = document.getElementById('nuevaAlergiaTipo').value;
-
-        try {
-            const resp = await fetch('/api/alergias', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre, tipo })
-            });
-            if (!resp.ok) throw new Error('No se pudo agregar la alergia');
-            document.getElementById('nuevaAlergiaNombre').value = '';
-            cargarCatalogoAlergias();
-        } catch (err) {
-            mostrarMensaje('mensajeRegistrar', err.message, 'error');
-        }
-    }
-
-    function obtenerAlergiasSeleccionadas() {
-        return Array.from(document.querySelectorAll('#listaAlergias input[type="checkbox"]:checked'))
-            .map(chk => ({ idAlergia: parseInt(chk.value, 10) }));
-    }
-
-    cargarCatalogoAlergias();
-
     async function registrarPaciente(event) {
         event.preventDefault();
 
@@ -244,14 +148,7 @@
             telefono: document.getElementById('telefono').value,
             correoElectronico: document.getElementById('correoElectronico').value,
             tipoSangre: document.getElementById('tipoSangre').value,
-            ocupacion: document.getElementById('ocupacion').value,
-            direccion: {
-                direccion: document.getElementById('direccion').value,
-                distrito: document.getElementById('distrito').value,
-                provincia: document.getElementById('provincia').value,
-                departamento: document.getElementById('departamento').value
-            },
-            alergias: obtenerAlergiasSeleccionadas()
+            ocupacion: document.getElementById('ocupacion').value
         };
 
         try {
@@ -260,7 +157,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (!resp.ok) throw new Error(await leerErrorApi(resp));
+            if (!resp.ok) throw new Error('El servidor respondió con error ' + resp.status);
 
             const nuevoPaciente = await resp.json();
             mostrarMensaje('mensajeRegistrar', 'Paciente registrado correctamente. Redirigiendo...', 'ok');

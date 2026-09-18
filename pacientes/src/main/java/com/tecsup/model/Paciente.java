@@ -58,7 +58,7 @@ public class Paciente {
     @JoinColumn(name = "id_direccion", referencedColumnName = "id_direccion")
     private Direccion direccion;
 
-    // Relación 1 a N (Para el requerimiento de tu compañera)
+    // Relación 1 a N
     @OneToMany(mappedBy = "paciente", cascade = CascadeType.ALL)
     private List<ContactoEmergencia> contactos;
 

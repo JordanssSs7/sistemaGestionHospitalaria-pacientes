@@ -10,6 +10,15 @@ function mostrarMensaje(elId, texto, tipo) {
     el.className = 'mensaje ' + tipo;
 }
 
+// Devuelve el mensaje que envía la API ({mensaje: "..."}) o uno genérico con el código HTTP
+async function leerErrorApi(resp) {
+    try {
+        const cuerpo = await resp.json();
+        if (cuerpo && cuerpo.mensaje) return cuerpo.mensaje;
+    } catch (e) { /* respuesta sin JSON */ }
+    return 'El servidor respondió con error ' + resp.status;
+}
+
 function obtenerIdPacienteDeUrl() {
     const params = new URLSearchParams(window.location.search);
     return params.get('id');

@@ -3,28 +3,52 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pacientes - Datos del paciente</title>
+<title>Pacientes - Ficha del paciente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body>
 
-<header>
-    <h1>Módulo de Pacientes</h1>
-    <p>Edición de datos del paciente (RF-PAC-08) y contactos de emergencia (RF-PAC-10)</p>
-</header>
+<div class="navbar">
+    <a href="index.html" class="logo">
+        <span class="icono"><i class="fa-solid fa-hospital"></i></span>
+        Módulo Pacientes
+    </a>
+    <nav>
+        <a href="registrar.html"><i class="fa-solid fa-user-plus"></i> Registrar</a>
+        <a href="buscar.html"><i class="fa-solid fa-magnifying-glass"></i> Buscar</a>
+        <a href="#" class="activo"><i class="fa-solid fa-id-card"></i> Ficha</a>
+    </nav>
+</div>
 
-<nav class="tabs">
-    <a href="index.html">Buscar</a>
-    <a href="#" class="activo">Datos del paciente</a>
-    <a href="#" id="linkContactos">Contactos de emergencia</a>
-</nav>
+<div class="contenido">
+    <button class="btn-volver" onclick="history.back()"><i class="fa-solid fa-arrow-left"></i> Volver</button>
 
-<main>
-    <section>
-        <h2>Datos del paciente (RF-PAC-08)</h2>
-        <div id="infoPaciente"></div>
+    <div class="resumen-paciente">
+        <div class="avatar" id="avatarPaciente">--</div>
+        <div class="datos">
+            <h2 id="nombreCompleto">Cargando...</h2>
+            <div class="meta">
+                <span id="metaCodigoEdad"></span>
+                <span id="badgeEstado"></span>
+            </div>
+        </div>
+        <div class="cta">
+            <button id="btnIrContactos" class="secundario">
+                <i class="fa-solid fa-address-book"></i>
+                Ver contactos de emergencia
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2><i class="fa-solid fa-pen-to-square"></i> Editar datos del paciente</h2>
 
         <form id="formPaciente" onsubmit="guardarPaciente(event)">
+            <div class="seccion-form">Identificación</div>
             <div class="grid-3">
                 <div>
                     <label>Tipo documento</label>
@@ -48,6 +72,7 @@
                 </div>
             </div>
 
+            <div class="seccion-form">Datos personales</div>
             <div class="grid-3">
                 <div>
                     <label>Nombres</label>
@@ -62,7 +87,6 @@
                     <input id="apellidoMaterno" type="text">
                 </div>
             </div>
-
             <div class="grid-3">
                 <div>
                     <label>Fecha nacimiento</label>
@@ -87,6 +111,7 @@
                 </div>
             </div>
 
+            <div class="seccion-form">Contacto y salud</div>
             <div class="grid-3">
                 <div>
                     <label>Teléfono</label>
@@ -106,7 +131,6 @@
                     </select>
                 </div>
             </div>
-
             <div class="grid-2">
                 <div>
                     <label>Ocupación</label>
@@ -114,11 +138,16 @@
                 </div>
             </div>
 
-            <button type="submit">Guardar cambios</button>
+            <button type="submit">
+                <i class="fa-solid fa-check"></i>
+                Guardar cambios
+            </button>
             <div id="mensajePaciente" class="mensaje"></div>
         </form>
-    </section>
-</main>
+    </div>
+
+    <div id="pieDePagina"></div>
+</div>
 
 <script src="js/comun.js"></script>
 <script>
@@ -126,9 +155,9 @@
     const idPaciente = obtenerIdPacienteDeUrl();
 
     if (!idPaciente) {
-        window.location.href = 'index.html';
+        window.location.href = 'buscar.html';
     } else {
-        document.getElementById('linkContactos').addEventListener('click', () => irAContactos(idPaciente));
+        document.getElementById('btnIrContactos').addEventListener('click', () => irAContactos(idPaciente));
         cargarPaciente();
     }
 
@@ -137,16 +166,24 @@
             const resp = await fetch(`${API_BASE}/${idPaciente}`);
             if (!resp.ok) throw new Error('No se pudo cargar el paciente');
             pacienteActual = await resp.json();
+            pintarResumen(pacienteActual);
             pintarFormulario(pacienteActual);
         } catch (err) {
             mostrarMensaje('mensajePaciente', err.message, 'error');
         }
     }
 
-    function pintarFormulario(p) {
-        document.getElementById('infoPaciente').textContent =
-            `Código: ${p.codigoPaciente ?? '-'} · Edad: ${p.edad ?? '-'} años`;
+    function pintarResumen(p) {
+        document.getElementById('avatarPaciente').textContent = iniciales(p.nombres, p.apellidoPaterno);
+        document.getElementById('nombreCompleto').textContent =
+            `${p.nombres ?? ''} ${p.apellidoPaterno ?? ''} ${p.apellidoMaterno ?? ''}`;
+        document.getElementById('metaCodigoEdad').textContent =
+            `${p.codigoPaciente ?? '-'} · ${p.edad ?? '-'} años`;
+        document.getElementById('badgeEstado').innerHTML =
+            `<span class="badge ${p.estado === 'Activo' ? 'si' : 'no'}">${p.estado ?? '-'}</span>`;
+    }
 
+    function pintarFormulario(p) {
         document.getElementById('tipoDocumento').value = p.tipoDocumento ?? 'DNI';
         document.getElementById('numeroDocumento').value = p.numeroDocumento ?? '';
         document.getElementById('estado').value = p.estado ?? 'Activo';
@@ -191,6 +228,7 @@
             });
             if (!resp.ok) throw new Error('El servidor respondió con error ' + resp.status);
             pacienteActual = await resp.json();
+            pintarResumen(pacienteActual);
             pintarFormulario(pacienteActual);
             mostrarMensaje('mensajePaciente', 'Datos del paciente actualizados correctamente.', 'ok');
         } catch (err) {

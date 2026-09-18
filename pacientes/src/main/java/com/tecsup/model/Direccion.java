@@ -33,4 +33,4 @@ public class Direccion {
 
     public String getDepartamento() { return departamento; }
     public void setDepartamento(String departamento) { this.departamento = departamento; }
-}
+}   

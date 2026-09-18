@@ -23,4 +23,14 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
             "OR p.apellidoMaterno LIKE %:termino%")
     List<Paciente> buscarPacienteGlobal(@Param("termino") String termino);
 
+    // Búsquedas filtradas por un solo campo
+    List<Paciente> findByNumeroDocumentoContaining(String termino);
+
+    List<Paciente> findByCodigoPacienteContainingIgnoreCase(String termino);
+
+    List<Paciente> findByNombresContainingIgnoreCase(String termino);
+
+    List<Paciente> findByApellidoPaternoContainingIgnoreCaseOrApellidoMaternoContainingIgnoreCase(
+            String apellidoPaterno, String apellidoMaterno);
+
 }

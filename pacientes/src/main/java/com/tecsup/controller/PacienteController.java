@@ -58,8 +58,9 @@ public class PacienteController {
 
     // Endpoint para RF-PAC-05
     @GetMapping("/buscar")
-    public ResponseEntity<List<Paciente>> buscarPaciente(@RequestParam String termino) {
-        List<Paciente> pacientes = pacienteService.buscarGlobal(termino);
+    public ResponseEntity<List<Paciente>> buscarPaciente(@RequestParam String termino,
+                                                         @RequestParam(required = false) String campo) {
+        List<Paciente> pacientes = pacienteService.buscarPorCampo(campo, termino);
         if(pacientes.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
