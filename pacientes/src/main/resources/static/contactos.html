@@ -152,6 +152,10 @@
                         <i class="fa-solid fa-pen-to-square"></i>
                         Editar
                     </button>
+                    <button class="secundario" onclick="eliminarContacto(${c.idContacto})">
+                        <i class="fa-solid fa-trash"></i>
+                        Eliminar
+                    </button>
                 </div>
             `;
             lista.appendChild(item);
@@ -181,6 +185,22 @@
         document.getElementById('btnGuardarContacto').innerHTML =
             '<i class="fa-solid fa-check"></i> Registrar contacto';
         document.getElementById('btnCancelarEdicion').classList.add('oculto');
+    }
+
+    async function eliminarContacto(idContacto) {
+        if (!confirm('¿Seguro que deseas eliminar este contacto de emergencia?')) return;
+        try {
+            const resp = await fetch(`${API_BASE}/${idPaciente}/contactos/${idContacto}`, { method: 'DELETE' });
+            if (!resp.ok) throw new Error(await leerErrorApi(resp));
+
+            if (document.getElementById('idContactoEdit').value === String(idContacto)) {
+                cancelarEdicionContacto();
+            }
+            mostrarMensaje('mensajeContacto', 'Contacto eliminado.', 'ok');
+            cargarContactos();
+        } catch (err) {
+            mostrarMensaje('mensajeContacto', 'No se pudo eliminar el contacto: ' + escapeHtml(err.message), 'error');
+        }
     }
 
     async function guardarContacto(event) {
