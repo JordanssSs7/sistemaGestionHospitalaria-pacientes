@@ -519,3 +519,18 @@ footer.pie .punto {
     0%, 100% { box-shadow: 0 0 0 4px var(--accent-light); }
     50% { box-shadow: 0 0 0 7px rgba(6, 182, 212, .18); }
 }
+
+.alergia-accion {
+    width: auto;
+    margin: 0;
+    padding: 0 4px;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    font-size: 14px;
+    line-height: 1;
+    opacity: .6;
+    cursor: pointer;
+}
+.alergia-accion:hover { opacity: 1; transform: none; }

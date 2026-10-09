@@ -62,3 +62,53 @@ function insertarFooter() {
 }
 
 document.addEventListener('DOMContentLoaded', insertarFooter);
+
+// ---- Catalogo de alergias: editar y eliminar (usado en registrar.html y paciente.html) ----
+async function editarAlergia(event, boton) {
+    event.preventDefault();
+    event.stopPropagation();
+    const id = boton.dataset.id;
+    const nombreActual = decodeURIComponent(boton.dataset.nombre);
+    const tipoActual = decodeURIComponent(boton.dataset.tipo);
+
+    const nombre = prompt('Nombre de la alergia:', nombreActual);
+    if (nombre === null || nombre.trim() === '') return;
+    const tipo = prompt('Tipo (Medicamento, Alimento u Otro):', tipoActual);
+    if (tipo === null) return;
+
+    try {
+        const resp = await fetch('/api/alergias/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: nombre.trim(), tipo: tipo.trim() })
+        });
+        if (!resp.ok) throw new Error('No se pudo editar la alergia');
+        await recargarCatalogoAlergias();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function eliminarAlergia(event, id) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!confirm('¿Eliminar esta alergia del catálogo? También se quitará de los pacientes que la tengan.')) return;
+
+    try {
+        const resp = await fetch('/api/alergias/' + id, { method: 'DELETE' });
+        if (!resp.ok) throw new Error('No se pudo eliminar la alergia');
+        await recargarCatalogoAlergias();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+// Vuelve a pintar el catalogo conservando las alergias marcadas en el formulario
+async function recargarCatalogoAlergias() {
+    const marcadas = Array.from(document.querySelectorAll('#listaAlergias input[type="checkbox"]:checked'))
+        .map(chk => chk.value);
+    await cargarCatalogoAlergias();
+    document.querySelectorAll('#listaAlergias input[type="checkbox"]').forEach(chk => {
+        chk.checked = marcadas.includes(chk.value);
+    });
+}
