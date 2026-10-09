@@ -534,3 +534,22 @@ footer.pie .punto {
     cursor: pointer;
 }
 .alergia-accion:hover { opacity: 1; transform: none; }
+
+/* ---- Sesion y control de acceso (P5) ---- */
+/* El menu se oculta hasta saber el rol, para no mostrar opciones que luego desaparecen */
+.navbar nav:not(.listo) { visibility: hidden; }
+.navbar nav .usuario-nav {
+    display: inline-flex;
+    flex-direction: column;
+    line-height: 1.15;
+    padding: 4px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    border-left: 1.5px solid var(--border);
+    margin-left: 6px;
+}
+.navbar nav .usuario-nav small { font-size: 11px; font-weight: 700; color: var(--accent); }
+
+/* Acciones de eliminar: RECEPCIONISTA no las ve (el backend tambien las rechaza con 403) */
+body[data-rol="RECEPCIONISTA"] .solo-eliminar { display: none !important; }

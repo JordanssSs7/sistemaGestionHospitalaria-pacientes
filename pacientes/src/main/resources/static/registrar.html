@@ -199,7 +199,7 @@
                 <input type="checkbox" value="${a.idAlergia}">
                 ${escapeHtml(a.nombre)} <span style="opacity:.7;">(${escapeHtml(a.tipo ?? '-')})</span>
                 <button type="button" class="alergia-accion" title="Editar" data-id="${a.idAlergia}" data-nombre="${encodeURIComponent(a.nombre)}" data-tipo="${encodeURIComponent(a.tipo ?? '')}" onclick="editarAlergia(event, this)">&#9998;</button>
-                <button type="button" class="alergia-accion" title="Eliminar" onclick="eliminarAlergia(event, ${a.idAlergia})">&times;</button>
+                <button type="button" class="alergia-accion solo-eliminar" title="Eliminar" onclick="eliminarAlergia(event, ${a.idAlergia})">&times;</button>
             </label>
         `).join('');
     }
