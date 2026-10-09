@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pacientes - Usuarios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="css/estilos.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<div class="navbar">
+    <a href="index.html" class="logo">
+        <span class="icono"><i class="fa-solid fa-hospital"></i></span>
+        Módulo Pacientes
+    </a>
+    <nav>
+        <a href="registrar.html"><i class="fa-solid fa-user-plus"></i> Registrar</a>
+        <a href="buscar.html"><i class="fa-solid fa-magnifying-glass"></i> Buscar</a>
+        <a href="usuarios.html" class="activo"><i class="fa-solid fa-users"></i> Usuarios</a>
+        <a href="roles.html"><i class="fa-solid fa-user-shield"></i> Roles</a>
+    </nav>
+</div>
+
+<div class="contenido">
+    <button class="btn-volver" onclick="history.back()"><i class="fa-solid fa-arrow-left"></i> Volver</button>
+
+    <div class="card">
+        <h2><i class="fa-solid fa-users"></i> Usuarios del sistema</h2>
+
+        <div class="tabla-wrap">
+            <table class="historial">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Correo</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoUsuarios">
+                    <tr><td colspan="5" style="color:#888; text-align:center; padding:24px;">Cargando usuarios...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="mensajeLista" class="mensaje"></div>
+    </div>
+
+    <div class="card">
+        <h2 id="tituloForm"><i class="fa-solid fa-user-plus"></i> Registrar nuevo usuario</h2>
+
+        <form id="formUsuario" onsubmit="guardarUsuario(event)">
+            <input type="hidden" id="idUsuarioEdit" value="">
+            <div class="grid-2">
+                <div>
+                    <label for="uUsername">Nombre de usuario</label>
+                    <input id="uUsername" type="text" required minlength="4" maxlength="50" autocomplete="off">
+                </div>
+                <div>
+                    <label for="uNombre">Nombre completo</label>
+                    <input id="uNombre" type="text" required maxlength="100">
+                </div>
+            </div>
+            <div class="grid-2">
+                <div>
+                    <label for="uCorreo">Correo</label>
+                    <input id="uCorreo" type="email" maxlength="100">
+                </div>
+                <div>
+                    <label for="uRol">Rol</label>
+                    <select id="uRol" required></select>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div>
+                    <label for="uPassword">Contraseña</label>
+                    <input id="uPassword" type="password" required minlength="6" maxlength="72" autocomplete="new-password">
+                    <div class="nota" id="notaPassword">Mínimo 6 caracteres.</div>
+                </div>
+            </div>
+
+            <div class="form-acciones">
+                <button type="submit" id="btnGuardar">
+                    <i class="fa-solid fa-check"></i> Registrar usuario
+                </button>
+                <button type="button" class="secundario oculto" id="btnCancelar" onclick="cancelarEdicion()">Cancelar</button>
+            </div>
+            <div id="mensajeForm" class="mensaje"></div>
+        </form>
+    </div>
+
+    <div id="pieDePagina"></div>
+</div>
+
+<script src="js/comun.js"></script>
+<script>
+    const API_USUARIOS = '/api/usuarios';
+    const API_ROLES = '/api/roles';
+    let usuarios = [];
+    let roles = [];
+
+    async function cargarRoles() {
+        const resp = await fetch(API_ROLES);
+        if (!resp.ok) throw new Error(await leerErrorApi(resp));
+        roles = await resp.json();
+        pintarSelectorRoles();
+    }
+
+    // Al registrar solo se ofrecen roles activos; al editar se conserva el rol actual aunque esté inactivo
+    function pintarSelectorRoles(idSeleccionado) {
+        const select = document.getElementById('uRol');
+        const idActual = idSeleccionado ?? select.value;
+        const opciones = roles.filter(r => r.activo || String(r.idRol) === String(idActual));
+        select.innerHTML = '<option value="">Selecciona un rol...</option>' + opciones.map(r =>
+            `<option value="${r.idRol}">${escapeHtml(r.nombre)}${r.activo ? '' : ' (inactivo)'}</option>`).join('');
+        select.value = idActual ? String(idActual) : '';
+    }
+
+    async function cargarUsuarios() {
+        try {
+            const resp = await fetch(API_USUARIOS);
+            if (!resp.ok) throw new Error(await leerErrorApi(resp));
+            usuarios = await resp.json();
+            pintarUsuarios();
+        } catch (err) {
+            document.getElementById('cuerpoUsuarios').innerHTML =
+                `<tr><td colspan="5" style="color:#b91c1c; text-align:center; padding:20px;">${escapeHtml(err.message)}</td></tr>`;
+        }
+    }
+
+    function pintarUsuarios() {
+        const cuerpo = document.getElementById('cuerpoUsuarios');
+        if (usuarios.length === 0) {
+            cuerpo.innerHTML = `<tr><td colspan="5"><div class="vacio"><i class="fa-solid fa-users"></i>Todavía no hay usuarios registrados.</div></td></tr>`;
+            return;
+        }
+        cuerpo.innerHTML = usuarios.map(u => {
+            const partes = (u.nombreCompleto ?? '').trim().split(/\s+/);
+            return `
+                <tr>
+                    <td>
+                        <div class="celda-paciente">
+                            <div class="avatar">${iniciales(partes[0], partes[1])}</div>
+                            <div>
+                                <div>${escapeHtml(u.nombreCompleto)}</div>
+                                <div class="nota">@${escapeHtml(u.username)}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${escapeHtml(u.correo ?? '-')}</td>
+                    <td><span class="badge rol">${escapeHtml(u.rol?.nombre ?? '-')}</span></td>
+                    <td><span class="badge ${u.activo ? 'si' : 'no'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
+                    <td>
+                        <div class="acciones-fila">
+                            <button class="secundario mini" onclick="editarUsuario(${u.idUsuario})">
+                                <i class="fa-solid fa-pen-to-square"></i> Editar
+                            </button>
+                            <button class="mini ${u.activo ? 'peligro' : ''}" onclick="cambiarEstado(${u.idUsuario}, ${!u.activo})">
+                                ${u.activo ? 'Desactivar' : 'Activar'}
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    function editarUsuario(id) {
+        const u = usuarios.find(x => x.idUsuario === id);
+        if (!u) return;
+        document.getElementById('idUsuarioEdit').value = u.idUsuario;
+        document.getElementById('uUsername').value = u.username;
+        document.getElementById('uUsername').disabled = true;
+        document.getElementById('uNombre').value = u.nombreCompleto ?? '';
+        document.getElementById('uCorreo').value = u.correo ?? '';
+        pintarSelectorRoles(u.rol?.idRol);
+        document.getElementById('uPassword').value = '';
+        document.getElementById('uPassword').required = false;
+        document.getElementById('notaPassword').textContent = 'Déjala vacía para conservar la contraseña actual.';
+
+        document.getElementById('tituloForm').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar usuario';
+        document.getElementById('btnGuardar').innerHTML = '<i class="fa-solid fa-check"></i> Guardar cambios';
+        document.getElementById('btnCancelar').classList.remove('oculto');
+        document.getElementById('mensajeForm').className = 'mensaje';
+        document.getElementById('formUsuario').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelarEdicion() {
+        document.getElementById('formUsuario').reset();
+        document.getElementById('idUsuarioEdit').value = '';
+        document.getElementById('uUsername').disabled = false;
+        document.getElementById('uPassword').required = true;
+        document.getElementById('notaPassword').textContent = 'Mínimo 6 caracteres.';
+        pintarSelectorRoles('');
+        document.getElementById('tituloForm').innerHTML = '<i class="fa-solid fa-user-plus"></i> Registrar nuevo usuario';
+        document.getElementById('btnGuardar').innerHTML = '<i class="fa-solid fa-check"></i> Registrar usuario';
+        document.getElementById('btnCancelar').classList.add('oculto');
+    }
+
+    async function guardarUsuario(event) {
+        event.preventDefault();
+        const id = document.getElementById('idUsuarioEdit').value;
+        const esEdicion = id !== '';
+        const payload = {
+            username: document.getElementById('uUsername').value.trim(),
+            password: document.getElementById('uPassword').value || null,
+            nombreCompleto: document.getElementById('uNombre').value,
+            correo: document.getElementById('uCorreo').value || null,
+            rolId: document.getElementById('uRol').value ? Number(document.getElementById('uRol').value) : null
+        };
+
+        try {
+            const resp = await fetch(esEdicion ? `${API_USUARIOS}/${id}` : API_USUARIOS, {
+                method: esEdicion ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) throw new Error(await leerErrorApi(resp));
+
+            cancelarEdicion();
+            mostrarMensaje('mensajeForm', esEdicion ? 'Usuario actualizado correctamente.' : 'Usuario registrado correctamente.', 'ok');
+            await cargarUsuarios();
+        } catch (err) {
+            mostrarMensaje('mensajeForm', escapeHtml(err.message), 'error');
+        }
+    }
+
+    async function cambiarEstado(id, activo) {
+        try {
+            const resp = await fetch(`${API_USUARIOS}/${id}/estado`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ activo })
+            });
+            if (!resp.ok) throw new Error(await leerErrorApi(resp));
+            mostrarMensaje('mensajeLista', activo ? 'Usuario activado.' : 'Usuario desactivado.', 'ok');
+            await cargarUsuarios();
+        } catch (err) {
+            mostrarMensaje('mensajeLista', escapeHtml(err.message), 'error');
+        }
+    }
+
+    cargarRoles().catch(err => mostrarMensaje('mensajeForm', escapeHtml(err.message), 'error'));
+    cargarUsuarios();
+</script>
+
+</body>
+</html>

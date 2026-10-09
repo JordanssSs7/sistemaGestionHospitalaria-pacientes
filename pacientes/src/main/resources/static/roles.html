@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pacientes - Roles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="css/estilos.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<div class="navbar">
+    <a href="index.html" class="logo">
+        <span class="icono"><i class="fa-solid fa-hospital"></i></span>
+        Módulo Pacientes
+    </a>
+    <nav>
+        <a href="registrar.html"><i class="fa-solid fa-user-plus"></i> Registrar</a>
+        <a href="buscar.html"><i class="fa-solid fa-magnifying-glass"></i> Buscar</a>
+        <a href="usuarios.html"><i class="fa-solid fa-users"></i> Usuarios</a>
+        <a href="roles.html" class="activo"><i class="fa-solid fa-user-shield"></i> Roles</a>
+    </nav>
+</div>
+
+<div class="contenido">
+    <button class="btn-volver" onclick="history.back()"><i class="fa-solid fa-arrow-left"></i> Volver</button>
+
+    <div class="card">
+        <h2><i class="fa-solid fa-user-shield"></i> Roles del sistema</h2>
+
+        <div class="tabla-wrap">
+            <table class="historial">
+                <thead>
+                    <tr>
+                        <th>Rol</th>
+                        <th>Descripción</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoRoles">
+                    <tr><td colspan="4" style="color:#888; text-align:center; padding:24px;">Cargando roles...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="mensajeLista" class="mensaje"></div>
+    </div>
+
+    <div class="card">
+        <h2 id="tituloForm"><i class="fa-solid fa-plus"></i> Registrar nuevo rol</h2>
+
+        <form id="formRol" onsubmit="guardarRol(event)">
+            <input type="hidden" id="idRolEdit" value="">
+            <div class="grid-2">
+                <div>
+                    <label for="rNombre">Nombre del rol</label>
+                    <input id="rNombre" type="text" required maxlength="30" placeholder="Ej: AUDITOR" autocomplete="off">
+                    <div class="nota" id="notaNombre">Solo letras sin tildes, números y guion bajo. Se guarda en mayúsculas.</div>
+                </div>
+                <div>
+                    <label for="rDescripcion">Descripción</label>
+                    <input id="rDescripcion" type="text" maxlength="150">
+                </div>
+            </div>
+
+            <div class="form-acciones">
+                <button type="submit" id="btnGuardar">
+                    <i class="fa-solid fa-check"></i> Registrar rol
+                </button>
+                <button type="button" class="secundario oculto" id="btnCancelar" onclick="cancelarEdicion()">Cancelar</button>
+            </div>
+            <div id="mensajeForm" class="mensaje"></div>
+        </form>
+    </div>
+
+    <div id="pieDePagina"></div>
+</div>
+
+<script src="js/comun.js"></script>
+<script>
+    const API_ROLES = '/api/roles';
+    const ROLES_BASE = ['ADMINISTRADOR', 'MEDICO', 'RECEPCIONISTA'];
+    let roles = [];
+
+    async function cargarRoles() {
+        try {
+            const resp = await fetch(API_ROLES);
+            if (!resp.ok) throw new Error(await leerErrorApi(resp));
+            roles = await resp.json();
+            pintarRoles();
+        } catch (err) {
+            document.getElementById('cuerpoRoles').innerHTML =
+                `<tr><td colspan="4" style="color:#b91c1c; text-align:center; padding:20px;">${escapeHtml(err.message)}</td></tr>`;
+        }
+    }
+
+    function pintarRoles() {
+        const cuerpo = document.getElementById('cuerpoRoles');
+        if (roles.length === 0) {
+            cuerpo.innerHTML = `<tr><td colspan="4"><div class="vacio"><i class="fa-solid fa-user-shield"></i>Todavía no hay roles registrados.</div></td></tr>`;
+            return;
+        }
+        cuerpo.innerHTML = roles.map(r => `
+            <tr>
+                <td><span class="badge rol">${escapeHtml(r.nombre)}</span></td>
+                <td>${escapeHtml(r.descripcion ?? '-')}</td>
+                <td><span class="badge ${r.activo ? 'si' : 'no'}">${r.activo ? 'Activo' : 'Inactivo'}</span></td>
+                <td>
+                    <div class="acciones-fila">
+                        <button class="secundario mini" onclick="editarRol(${r.idRol})">
+                            <i class="fa-solid fa-pen-to-square"></i> Editar
+                        </button>
+                        <button class="mini ${r.activo ? 'peligro' : ''}" onclick="cambiarEstado(${r.idRol}, ${!r.activo})">
+                            ${r.activo ? 'Desactivar' : 'Activar'}
+                        </button>
+                    </div>
+                </td>
+            </tr>`).join('');
+    }
+
+    function editarRol(id) {
+        const r = roles.find(x => x.idRol === id);
+        if (!r) return;
+        const esBase = ROLES_BASE.includes(r.nombre);
+        document.getElementById('idRolEdit').value = r.idRol;
+        document.getElementById('rNombre').value = r.nombre;
+        document.getElementById('rNombre').disabled = esBase;
+        document.getElementById('notaNombre').textContent = esBase
+            ? 'El nombre de un rol base no se puede cambiar.'
+            : 'Solo letras sin tildes, números y guion bajo. Se guarda en mayúsculas.';
+        document.getElementById('rDescripcion').value = r.descripcion ?? '';
+
+        document.getElementById('tituloForm').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar rol';
+        document.getElementById('btnGuardar').innerHTML = '<i class="fa-solid fa-check"></i> Guardar cambios';
+        document.getElementById('btnCancelar').classList.remove('oculto');
+        document.getElementById('mensajeForm').className = 'mensaje';
+        document.getElementById('formRol').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelarEdicion() {
+        document.getElementById('formRol').reset();
+        document.getElementById('idRolEdit').value = '';
+        document.getElementById('rNombre').disabled = false;
+        document.getElementById('notaNombre').textContent = 'Solo letras sin tildes, números y guion bajo. Se guarda en mayúsculas.';
+        document.getElementById('tituloForm').innerHTML = '<i class="fa-solid fa-plus"></i> Registrar nuevo rol';
+        document.getElementById('btnGuardar').innerHTML = '<i class="fa-solid fa-check"></i> Registrar rol';
+        document.getElementById('btnCancelar').classList.add('oculto');
+    }
+
+    async function guardarRol(event) {
+        event.preventDefault();
+        const id = document.getElementById('idRolEdit').value;
+        const esEdicion = id !== '';
+        // El campo deshabilitado (rol base) no se puede leer del formulario: se toma del rol cargado
+        const nombre = esEdicion ? (document.getElementById('rNombre').disabled
+            ? roles.find(r => r.idRol === Number(id)).nombre
+            : document.getElementById('rNombre').value) : document.getElementById('rNombre').value;
+        const payload = {
+            nombre: nombre.trim(),
+            descripcion: document.getElementById('rDescripcion').value || null
+        };
+
+        try {
+            const resp = await fetch(esEdicion ? `${API_ROLES}/${id}` : API_ROLES, {
+                method: esEdicion ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) throw new Error(await leerErrorApi(resp));
+
+            cancelarEdicion();
+            mostrarMensaje('mensajeForm', esEdicion ? 'Rol actualizado correctamente.' : 'Rol registrado correctamente.', 'ok');
+            await cargarRoles();
+        } catch (err) {
+            mostrarMensaje('mensajeForm', escapeHtml(err.message), 'error');
+        }
+    }
+
+    async function cambiarEstado(id, activo) {
+        try {
+            const resp = await fetch(`${API_ROLES}/${id}/estado`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ activo })
+            });
+            if (!resp.ok) throw new Error(await leerErrorApi(resp));
+            mostrarMensaje('mensajeLista', activo ? 'Rol activado.' : 'Rol desactivado.', 'ok');
+            await cargarRoles();
+        } catch (err) {
+            mostrarMensaje('mensajeLista', escapeHtml(err.message), 'error');
+        }
+    }
+
+    cargarRoles();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+/* Estilos de las pantallas de administración (usuarios y roles) */
+
+.acciones-fila {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+button.mini {
+    margin-top: 0;
+    padding: 7px 14px;
+    font-size: 12.5px;
+}
+
+button.peligro {
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    box-shadow: 0 8px 18px -6px rgba(220, 38, 38, .45);
+}
+button.peligro:hover {
+    box-shadow: 0 12px 24px -6px rgba(220, 38, 38, .55);
+}
+
+.badge.rol {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.form-acciones {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.nota {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+input:disabled {
+    background: #eef1f5;
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+
+table.historial td .nota {
+    margin-top: 2px;
+}
