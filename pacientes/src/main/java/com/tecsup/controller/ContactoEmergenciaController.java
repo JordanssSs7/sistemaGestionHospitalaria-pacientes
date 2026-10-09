@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api/pacientes/{idPaciente}/contactos")
@@ -22,19 +24,39 @@ public class ContactoEmergenciaController {
 
     // RF-PAC-10: registrar contacto (POST)
     @PostMapping
-    public ResponseEntity<ContactoEmergencia> registrarContacto(@PathVariable Integer idPaciente,
-                                                                @RequestBody ContactoEmergencia contacto) {
-        ContactoEmergencia nuevo = contactoEmergenciaService.registrarContacto(idPaciente, contacto);
-        return new ResponseEntity<>(nuevo, HttpStatus.CREATED);
+    public ResponseEntity<?> registrarContacto(@PathVariable Integer idPaciente,
+                                               @RequestBody ContactoEmergencia contacto) {
+        try {
+            ContactoEmergencia nuevo = contactoEmergenciaService.registrarContacto(idPaciente, contacto);
+            return new ResponseEntity<>(nuevo, HttpStatus.CREATED);
+        } catch (NoSuchElementException e) {
+            return new ResponseEntity<>(Map.of("mensaje", e.getMessage()), HttpStatus.NOT_FOUND);
+        }
     }
 
     // RF-PAC-10: actualizar contacto (PUT)
     @PutMapping("/{idContacto}")
-    public ResponseEntity<ContactoEmergencia> actualizarContacto(@PathVariable Integer idPaciente,
-                                                                 @PathVariable Integer idContacto,
-                                                                 @RequestBody ContactoEmergencia contacto) {
-        ContactoEmergencia actualizado = contactoEmergenciaService.actualizarContacto(idContacto, contacto);
-        return new ResponseEntity<>(actualizado, HttpStatus.OK);
+    public ResponseEntity<?> actualizarContacto(@PathVariable Integer idPaciente,
+                                                @PathVariable Integer idContacto,
+                                                @RequestBody ContactoEmergencia contacto) {
+        try {
+            ContactoEmergencia actualizado = contactoEmergenciaService.actualizarContacto(idContacto, contacto);
+            return new ResponseEntity<>(actualizado, HttpStatus.OK);
+        } catch (NoSuchElementException e) {
+            return new ResponseEntity<>(Map.of("mensaje", e.getMessage()), HttpStatus.NOT_FOUND);
+        }
+    }
+
+    // Eliminar contacto (DELETE)
+    @DeleteMapping("/{idContacto}")
+    public ResponseEntity<?> eliminarContacto(@PathVariable Integer idPaciente,
+                                              @PathVariable Integer idContacto) {
+        try {
+            contactoEmergenciaService.eliminarContacto(idPaciente, idContacto);
+            return ResponseEntity.noContent().build();
+        } catch (NoSuchElementException e) {
+            return new ResponseEntity<>(Map.of("mensaje", e.getMessage()), HttpStatus.NOT_FOUND);
+        }
     }
 
     // Listar contactos de un paciente (GET)
