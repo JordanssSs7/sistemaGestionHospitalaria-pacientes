@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 public class AlergiaService {
@@ -23,13 +24,15 @@ public class AlergiaService {
     }
 
     public Alergia registrar(Alergia alergia) {
+        validarNombre(alergia);
         return alergiaRepository.save(alergia);
     }
 
     public Alergia actualizar(Integer idAlergia, Alergia datos) {
         Alergia alergia = alergiaRepository.findById(idAlergia)
-                .orElseThrow(() -> new RuntimeException("Alergia no encontrada con id: " + idAlergia));
-        alergia.setNombre(datos.getNombre());
+                .orElseThrow(() -> new NoSuchElementException("Alergia no encontrada con id: " + idAlergia));
+        validarNombre(datos);
+        alergia.setNombre(datos.getNombre().trim());
         alergia.setTipo(datos.getTipo());
         return alergiaRepository.save(alergia);
     }
@@ -37,8 +40,14 @@ public class AlergiaService {
     @Transactional
     public void eliminar(Integer idAlergia) {
         Alergia alergia = alergiaRepository.findById(idAlergia)
-                .orElseThrow(() -> new RuntimeException("Alergia no encontrada con id: " + idAlergia));
+                .orElseThrow(() -> new NoSuchElementException("Alergia no encontrada con id: " + idAlergia));
         alergiaRepository.quitarDePacientes(idAlergia);
         alergiaRepository.delete(alergia);
+    }
+
+    private void validarNombre(Alergia alergia) {
+        if (alergia.getNombre() == null || alergia.getNombre().isBlank()) {
+            throw new IllegalArgumentException("El nombre de la alergia es obligatorio.");
+        }
     }
 }
