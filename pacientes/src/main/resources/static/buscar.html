@@ -40,7 +40,7 @@
         <div class="fila-busqueda">
             <i class="fa-solid fa-magnifying-glass"></i>
             <input id="inputBusqueda" type="text" placeholder="Escribe un nombre...">
-            <button onclick="buscarPaciente()">Buscar</button>
+            <button onclick="filtrarPacientes()">Buscar</button>
         </div>
 
         <div id="mensajeBusqueda" class="mensaje"></div>
@@ -69,37 +69,58 @@
             filtroActivo = pill.dataset.filtro;
             document.getElementById('inputBusqueda').placeholder = placeholders[filtroActivo];
             document.getElementById('inputBusqueda').focus();
+            filtrarPacientes();
         });
     });
 
-    async function buscarPaciente() {
-        const termino = document.getElementById('inputBusqueda').value.trim();
-        const lista = document.getElementById('listaResultados');
-        lista.innerHTML = '';
+    // Se piden todos los pacientes una sola vez; despues se filtra en el navegador mientras se escribe
+    let todosLosPacientes = [];
 
-        if (!termino) {
-            mostrarMensaje('mensajeBusqueda', 'Escribe un texto para buscar.', 'error');
-            return;
-        }
+    async function cargarPacientes() {
         try {
-            const resp = await fetch(`${API_BASE}/buscar?termino=${encodeURIComponent(termino)}&campo=${encodeURIComponent(filtroActivo)}`);
-            if (resp.status === 404) {
-                document.getElementById('mensajeBusqueda').className = 'mensaje';
-                lista.innerHTML = `
-                    <div class="vacio">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        No se encontraron pacientes que coincidan con "${escapeHtml(termino)}".
-                    </div>`;
-                return;
-            }
+            const resp = await fetch(API_BASE);
             if (!resp.ok) throw new Error(await leerErrorApi(resp));
-
-            const pacientes = await resp.json();
-            document.getElementById('mensajeBusqueda').className = 'mensaje';
-            pintarResultados(pacientes);
+            todosLosPacientes = await resp.json();
+            filtrarPacientes();
         } catch (err) {
             mostrarMensaje('mensajeBusqueda', 'Error de conexión con la API: ' + err.message, 'error');
         }
+    }
+
+    // Alguna palabra del texto empieza con lo escrito (ej: "m" encuentra "Maria" y "Jose Manuel")
+    function empiezaPalabra(texto, termino) {
+        return (texto ?? '').toLowerCase().split(/\s+/).some(palabra => palabra.startsWith(termino));
+    }
+
+    function coincide(p, termino) {
+        const porNombre = empiezaPalabra(p.nombres, termino);
+        const porApellido = empiezaPalabra(p.apellidoPaterno, termino) || empiezaPalabra(p.apellidoMaterno, termino);
+        const porDocumento = (p.numeroDocumento ?? '').toLowerCase().startsWith(termino);
+        const porCodigo = (p.codigoPaciente ?? '').toLowerCase().startsWith(termino);
+
+        switch (filtroActivo) {
+            case 'Nombre': return porNombre;
+            case 'Apellido': return porApellido;
+            case 'Documento': return porDocumento;
+            case 'Código': return porCodigo;
+            default: return porNombre || porApellido || porDocumento || porCodigo;
+        }
+    }
+
+    function filtrarPacientes() {
+        const termino = document.getElementById('inputBusqueda').value.trim().toLowerCase();
+        const resultados = termino ? todosLosPacientes.filter(p => coincide(p, termino)) : todosLosPacientes;
+        document.getElementById('mensajeBusqueda').className = 'mensaje';
+
+        if (resultados.length === 0) {
+            document.getElementById('listaResultados').innerHTML = `
+                <div class="vacio">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    ${termino ? `No se encontraron pacientes que coincidan con "${escapeHtml(termino)}".` : 'Todavía no hay pacientes registrados.'}
+                </div>`;
+            return;
+        }
+        pintarResultados(resultados);
     }
 
     function pintarResultados(pacientes) {
@@ -131,15 +152,13 @@
         });
     }
 
-    document.getElementById('inputBusqueda').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') buscarPaciente();
-    });
+    document.getElementById('inputBusqueda').addEventListener('input', filtrarPacientes);
 
     const terminoUrl = new URLSearchParams(window.location.search).get('q');
     if (terminoUrl) {
         document.getElementById('inputBusqueda').value = terminoUrl;
-        buscarPaciente();
     }
+    cargarPacientes();
 </script>
 
 </body>
